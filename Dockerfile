@@ -23,4 +23,4 @@ COPY nginx.conf /etc/nginx/templates/default.conf.template
 # When run, Cloud Run provides the PORT environment variable.
 # We substitute __PORT__ in the template with the true PORT at runtime,
 # ensuring Nginx listens on the correct port as required by Google Cloud.
-CMD ["/bin/sh" , "-c" , "envsubst < /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && exec nginx -g 'daemon off;'"]
+CMD ["/bin/sh" , "-c" , "sed s/__PORT__/${PORT:-8080}/g /etc/nginx/templates/default.conf.template > /etc/nginx/conf.d/default.conf && exec nginx -g 'daemon off;'"]
