@@ -20,7 +20,6 @@ import { da } from 'date-fns/locale'
 import { ChevronLeft, ChevronRight, AlertCircle, Trash2 } from 'lucide-react'
 
 export default function BookingCalendar({ 
-  boatId, 
   bookings = [], 
   onBook, 
   onDeleteBooking,

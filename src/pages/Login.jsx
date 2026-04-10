@@ -32,7 +32,7 @@ export default function Login() {
     setError(null)
     setMessage(null)
 
-    const { error, data } = await supabase.auth.signUp({
+    const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {

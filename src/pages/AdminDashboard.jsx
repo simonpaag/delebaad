@@ -1,8 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { Settings, Users, Ship, Anchor, LogOut, Plus, Trash2, Mail } from 'lucide-react'
-import { useAuth } from '../contexts/AuthContext'
-
 function TabBoats() {
   const [boats, setBoats] = useState([])
   const [allUsers, setAllUsers] = useState([])
@@ -11,11 +9,7 @@ function TabBoats() {
   // Form state
   const [newBoat, setNewBoat] = useState({ name: '', description: '', location: '' })
   
-  useEffect(() => {
-    fetchData()
-  }, [])
-
-  const fetchData = async () => {
+  async function fetchData() {
     setLoading(true)
     // Hent både
     const { data: bData } = await supabase.from('boats').select(`
@@ -32,6 +26,10 @@ function TabBoats() {
     if (uData) setAllUsers(uData)
     setLoading(false)
   }
+
+  useEffect(() => {
+    fetchData()
+  }, [])
 
   const handleCreateBoat = async (e) => {
     e.preventDefault()
@@ -135,14 +133,14 @@ function TabBoats() {
 function TabUsers() {
   const [users, setUsers] = useState([])
   
-  useEffect(() => {
-    fetchUsers()
-  }, [])
-
-  const fetchUsers = async () => {
+  async function fetchUsers() {
     const { data } = await supabase.from('profiles').select('*')
     if(data) setUsers(data)
   }
+
+  useEffect(() => {
+    fetchUsers()
+  }, [])
 
   const handleChangeRole = async (userId, newRole) => {
     await supabase.from('profiles').update({ role: newRole }).eq('id', userId)
@@ -186,15 +184,15 @@ function TabSettings() {
   const [settings, setSettings] = useState({ platform_name: '', maintenance_mode: false })
   const [loading, setLoading] = useState(true)
 
-  useEffect(() => {
-    loadSettings()
-  }, [])
-
-  const loadSettings = async () => {
+  async function loadSettings() {
     const { data } = await supabase.from('settings').select('*').limit(1).single()
     if(data) setSettings(data)
     setLoading(false)
   }
+
+  useEffect(() => {
+    loadSettings()
+  }, [])
 
   const saveSettings = async () => {
     await supabase.from('settings').update({

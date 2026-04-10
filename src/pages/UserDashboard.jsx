@@ -14,11 +14,7 @@ export default function UserDashboard() {
   const [bookings, setBookings] = useState([])
   const [calendarLoading, setCalendarLoading] = useState(false)
 
-  useEffect(() => {
-    fetchBoats()
-  }, [])
-
-  const fetchBoats = async () => {
+  async function fetchBoats() {
     const { data, error } = await supabase.from('boats').select('*')
     if (error) {
       console.error('Fejl ved hentning af både', error)
@@ -27,6 +23,10 @@ export default function UserDashboard() {
     setBoats(data || [])
     setLoading(false)
   }
+
+  useEffect(() => {
+    fetchBoats()
+  }, [])
 
   const handleLogout = async () => {
     await supabase.auth.signOut()
