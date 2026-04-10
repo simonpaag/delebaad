@@ -18,6 +18,7 @@ export default function UserDashboard() {
     const { data, error } = await supabase.from('boats').select('*')
     if (error) {
       console.error('Fejl ved hentning af både', error)
+      setLoading(false)
       return
     }
     setBoats(data || [])
