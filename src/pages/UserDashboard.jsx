@@ -3,7 +3,7 @@ import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { Ship, Calendar as CalendarIcon, MapPin, LogOut, X } from 'lucide-react'
 import BookingCalendar from '../components/BookingCalendar'
-
+import BoatLogbook from '../components/BoatLogbook'
 export default function UserDashboard() {
   const { user } = useAuth()
   const [boats, setBoats] = useState([])
@@ -67,7 +67,11 @@ export default function UserDashboard() {
       
     if (error) {
       console.error('Kunne ikke gemme booking', error)
-      alert('Der skete en fejl: ' + error.message)
+      if (error.message.includes('overlapper')) {
+         alert('Beklager, reservationen kunne ikke gennemføres: Datoen er i mellemtiden blevet booket af en anden.')
+      } else {
+         alert('Der skete en fejl: ' + error.message)
+      }
     } else {
       fetchBookings(activeBoat.id) // genindlæs efter succes
     }
@@ -197,14 +201,24 @@ export default function UserDashboard() {
             {calendarLoading && bookings.length === 0 ? (
                <div className="py-20 text-center text-gray-400">Henter kalender...</div>
             ) : (
-              <BookingCalendar 
-                 boatId={activeBoat.id}
-                 bookings={bookings}
-                 onBook={handleCreateBooking}
-                 onDeleteBooking={handleDeleteBooking}
-                 userId={user.id}
-                 loading={calendarLoading}
-              />
+              <div className="flex flex-col xl:flex-row gap-8">
+                <div className="flex-1">
+                  <BookingCalendar 
+                     boatId={activeBoat.id}
+                     bookings={bookings}
+                     onBook={handleCreateBooking}
+                     onDeleteBooking={handleDeleteBooking}
+                     userId={user.id}
+                     loading={calendarLoading}
+                  />
+                </div>
+                <div className="w-full xl:w-[400px]">
+                  <BoatLogbook 
+                     boatId={activeBoat.id}
+                     userId={user.id}
+                  />
+                </div>
+              </div>
             )}
           </div>
         )}

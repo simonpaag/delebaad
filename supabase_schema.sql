@@ -144,3 +144,62 @@ drop trigger if exists on_auth_user_created on auth.users;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+-- ==========================================
+-- NYE FEATURES (EPIC A & D)
+-- ==========================================
+
+-- 7. Logbog (Epic A)
+CREATE TABLE IF NOT EXISTS public.boat_logs (
+  id uuid default gen_random_uuid() primary key,
+  boat_id uuid references public.boats(id) on delete cascade,
+  user_id uuid references public.profiles(id) on delete cascade,
+  content text not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.boat_logs enable row level security;
+create policy "Admins can do everything on boat_logs" on public.boat_logs to authenticated using (public.is_admin());
+
+create policy "Users kan læse logs for deres både" on public.boat_logs for select to authenticated
+using (
+  exists (
+    select 1 from public.boat_members bm
+    where bm.boat_id = boat_logs.boat_id and bm.user_id = auth.uid()
+  )
+);
+
+create policy "Users kan oprette logs for deres både" on public.boat_logs for insert to authenticated
+with check (
+  auth.uid() = user_id and 
+  exists (
+    select 1 from public.boat_members bm
+    where bm.boat_id = boat_logs.boat_id and bm.user_id = auth.uid()
+  )
+);
+
+create policy "Users kan slette egne logs" on public.boat_logs for delete to authenticated
+using (auth.uid() = user_id);
+
+-- 8. Booking Validering (Epic D)
+create or replace function public.check_booking_overlap()
+returns trigger as $$
+begin
+  if exists (
+    select 1 from public.bookings b
+    where b.boat_id = new.boat_id
+      and b.id != coalesce(new.id, '00000000-0000-0000-0000-000000000000'::uuid)
+      and (
+        (new.start_date <= b.end_date) and (new.end_date >= b.start_date)
+      )
+  ) then
+    raise exception 'Booking overlapper med en eksisterende booking.';
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer;
+
+drop trigger if exists prevent_booking_overlap on public.bookings;
+create trigger prevent_booking_overlap
+  before insert or update on public.bookings
+  for each row execute procedure public.check_booking_overlap();
