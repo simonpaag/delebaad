@@ -244,3 +244,88 @@ using (public.is_baadsmand(boat_id) OR auth.uid() = user_id);
 drop policy if exists "Bådsmænd kan slette logs" on public.boat_logs;
 create policy "Bådsmænd kan slette logs" on public.boat_logs for delete to authenticated
 using (public.is_baadsmand(boat_id) OR auth.uid() = user_id);
+
+-- ==========================================
+-- EPIC B: Udgifter & Økonomi
+-- ==========================================
+
+CREATE TABLE IF NOT EXISTS public.boat_expenses (
+  id uuid default gen_random_uuid() primary key,
+  boat_id uuid references public.boats(id) on delete cascade,
+  paid_by_user_id uuid references public.profiles(id) on delete cascade,
+  amount numeric not null,
+  description text not null,
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.boat_expenses enable row level security;
+
+create policy "Admins can do everything on boat_expenses" on public.boat_expenses to authenticated using (public.is_admin());
+
+create policy "Users kan læse udgifter for deres både" on public.boat_expenses for select to authenticated
+using (
+  exists (
+    select 1 from public.boat_members bm
+    where bm.boat_id = boat_expenses.boat_id and bm.user_id = auth.uid()
+  )
+);
+
+create policy "Users kan oprette udgifter for deres både" on public.boat_expenses for insert to authenticated
+with check (
+  auth.uid() = paid_by_user_id and 
+  exists (
+    select 1 from public.boat_members bm
+    where bm.boat_id = boat_expenses.boat_id and bm.user_id = auth.uid()
+  )
+);
+
+create policy "Users kan slette egne udgifter" on public.boat_expenses for delete to authenticated
+using (auth.uid() = paid_by_user_id OR public.is_baadsmand(boat_id));
+
+
+-- ==========================================
+-- EPIC C: Vedligehold og Opgaver
+-- ==========================================
+
+CREATE TABLE IF NOT EXISTS public.boat_tasks (
+  id uuid default gen_random_uuid() primary key,
+  boat_id uuid references public.boats(id) on delete cascade,
+  created_by uuid references public.profiles(id) on delete cascade,
+  assigned_to uuid references public.profiles(id) on delete set null,
+  title text not null,
+  description text,
+  status text default 'pending' check (status in ('pending', 'in_progress', 'completed')),
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.boat_tasks enable row level security;
+
+create policy "Admins can do everything on boat_tasks" on public.boat_tasks to authenticated using (public.is_admin());
+
+create policy "Users kan læse opgaver for deres både" on public.boat_tasks for select to authenticated
+using (
+  exists (
+    select 1 from public.boat_members bm
+    where bm.boat_id = boat_tasks.boat_id and bm.user_id = auth.uid()
+  )
+);
+
+create policy "Users kan oprette opgaver for deres både" on public.boat_tasks for insert to authenticated
+with check (
+  auth.uid() = created_by and 
+  exists (
+    select 1 from public.boat_members bm
+    where bm.boat_id = boat_tasks.boat_id and bm.user_id = auth.uid()
+  )
+);
+
+create policy "Users kan opdatere opgaver på deres både" on public.boat_tasks for update to authenticated
+using (
+  exists (
+    select 1 from public.boat_members bm
+    where bm.boat_id = boat_tasks.boat_id and bm.user_id = auth.uid()
+  )
+);
+
+create policy "Bådsmænd kan slette opgaver" on public.boat_tasks for delete to authenticated
+using (auth.uid() = created_by OR public.is_baadsmand(boat_id));

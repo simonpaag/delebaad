@@ -4,6 +4,8 @@ import { useAuth } from '../contexts/AuthContext'
 import { Ship, Calendar as CalendarIcon, MapPin, LogOut, X } from 'lucide-react'
 import BookingCalendar from '../components/BookingCalendar'
 import BoatLogbook from '../components/BoatLogbook'
+import BoatTasks from '../components/BoatTasks'
+import BoatExpenses from '../components/BoatExpenses'
 export default function UserDashboard() {
   const { user } = useAuth()
   const [boats, setBoats] = useState([])
@@ -13,6 +15,7 @@ export default function UserDashboard() {
   const [activeBoat, setActiveBoat] = useState(null)
   const [bookings, setBookings] = useState([])
   const [calendarLoading, setCalendarLoading] = useState(false)
+  const [activeTab, setActiveTab] = useState('booking')
 
   // Boat state
   const [isEditingBoat, setIsEditingBoat] = useState(false)
@@ -45,6 +48,7 @@ export default function UserDashboard() {
   const handleOpenCalendar = async (boat) => {
     setActiveBoat(boat)
     setEditBoatData(boat)
+    setActiveTab('booking')
     fetchBookings(boat.id)
   }
 
@@ -258,25 +262,53 @@ export default function UserDashboard() {
             {calendarLoading && bookings.length === 0 ? (
                <div className="py-20 text-center text-gray-400">Henter kalender...</div>
             ) : (
-              <div className="flex flex-col xl:flex-row gap-8">
-                <div className="flex-1">
-                  <BookingCalendar 
-                     boatId={activeBoat.id}
-                     bookings={bookings}
-                     onBook={handleCreateBooking}
-                     onDeleteBooking={handleDeleteBooking}
-                     userId={user.id}
-                     loading={calendarLoading}
-                     isBaadsmand={activeBoat.boat_members?.[0]?.member_role === 'baadsmand'}
-                  />
+              <div>
+                {/* TABS */}
+                <div className="flex flex-wrap space-x-1 border-b border-gray-200 mb-6 bg-gray-50/80 p-1 rounded-t-lg">
+                  <button onClick={() => setActiveTab('booking')} className={`px-4 py-2.5 text-sm font-medium rounded-md transition ${activeTab === 'booking' ? 'bg-white shadow-sm text-blue-600 border border-gray-100' : 'text-gray-500 hover:text-gray-900 border border-transparent'}`}>Kalender & Logbog</button>
+                  <button onClick={() => setActiveTab('tasks')} className={`px-4 py-2.5 text-sm font-medium rounded-md transition ${activeTab === 'tasks' ? 'bg-white shadow-sm text-blue-600 border border-gray-100' : 'text-gray-500 hover:text-gray-900 border border-transparent'}`}>Drift & Opgaver</button>
+                  <button onClick={() => setActiveTab('expenses')} className={`px-4 py-2.5 text-sm font-medium rounded-md transition ${activeTab === 'expenses' ? 'bg-white shadow-sm text-blue-600 border border-gray-100' : 'text-gray-500 hover:text-gray-900 border border-transparent'}`}>Fællesøkonomi</button>
                 </div>
-                <div className="w-full xl:w-[400px]">
-                  <BoatLogbook 
-                     boatId={activeBoat.id}
-                     userId={user.id}
-                     isBaadsmand={activeBoat.boat_members?.[0]?.member_role === 'baadsmand'}
+                
+                {/* INDHOLD AFHÆNGIG AF TAB */}
+                {activeTab === 'booking' && (
+                  <div className="flex flex-col xl:flex-row gap-8">
+                    <div className="flex-1">
+                      <BookingCalendar 
+                         boatId={activeBoat.id}
+                         bookings={bookings}
+                         onBook={handleCreateBooking}
+                         onDeleteBooking={handleDeleteBooking}
+                         userId={user.id}
+                         loading={calendarLoading}
+                         isBaadsmand={activeBoat.boat_members?.[0]?.member_role === 'baadsmand'}
+                      />
+                    </div>
+                    <div className="w-full xl:w-[400px]">
+                      <BoatLogbook 
+                         boatId={activeBoat.id}
+                         userId={user.id}
+                         isBaadsmand={activeBoat.boat_members?.[0]?.member_role === 'baadsmand'}
+                      />
+                    </div>
+                  </div>
+                )}
+                
+                {activeTab === 'tasks' && (
+                  <BoatTasks 
+                    boatId={activeBoat.id}
+                    userId={user.id}
+                    isBaadsmand={activeBoat.boat_members?.[0]?.member_role === 'baadsmand'}
                   />
-                </div>
+                )}
+                
+                {activeTab === 'expenses' && (
+                  <BoatExpenses 
+                    boatId={activeBoat.id}
+                    userId={user.id}
+                    isBaadsmand={activeBoat.boat_members?.[0]?.member_role === 'baadsmand'}
+                  />
+                )}
               </div>
             )}
           </div>
