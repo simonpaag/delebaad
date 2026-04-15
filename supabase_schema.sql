@@ -203,3 +203,44 @@ drop trigger if exists prevent_booking_overlap on public.bookings;
 create trigger prevent_booking_overlap
   before insert or update on public.bookings
   for each row execute procedure public.check_booking_overlap();
+
+-- ==========================================
+-- NYE FEATURES (BÅDSMAND ROLLER)
+-- ==========================================
+
+-- 9. Tilføj member_role kolonne
+ALTER TABLE IF EXISTS public.boat_members 
+ADD COLUMN IF NOT EXISTS member_role text default 'sejler' check (member_role in ('sejler', 'baadsmand'));
+
+-- 10. Hjælpefunktion: Er brugeren Bådsmand?
+create or replace function public.is_baadsmand(check_boat_id uuid)
+returns boolean as $$
+declare
+  is_admin boolean;
+begin
+  select exists (
+    select 1 from public.boat_members 
+    where boat_id = check_boat_id 
+      and user_id = auth.uid() 
+      and member_role = 'baadsmand'
+  ) into is_admin;
+  return is_admin;
+end;
+$$ language plpgsql security definer;
+
+-- 11. Nye RLS Politikker for Bådsmænd
+-- Tillad UPDATE på selve båden
+drop policy if exists "Bådsmænd kan opdatere egne både" on public.boats;
+create policy "Bådsmænd kan opdatere egne både" on public.boats for update to authenticated
+using (public.is_baadsmand(id))
+with check (public.is_baadsmand(id));
+
+-- Tillad DELETE af andres bookinger
+drop policy if exists "Bådsmænd kan slette andres bookinger" on public.bookings;
+create policy "Bådsmænd kan slette andres bookinger" on public.bookings for delete to authenticated
+using (public.is_baadsmand(boat_id) OR auth.uid() = user_id);
+
+-- Tillad DELETE af logs
+drop policy if exists "Bådsmænd kan slette logs" on public.boat_logs;
+create policy "Bådsmænd kan slette logs" on public.boat_logs for delete to authenticated
+using (public.is_baadsmand(boat_id) OR auth.uid() = user_id);

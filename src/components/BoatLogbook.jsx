@@ -4,7 +4,7 @@ import { MessageSquare, Send, Trash2, Clock } from 'lucide-react'
 import { format, parseISO } from 'date-fns'
 import { da } from 'date-fns/locale'
 
-export default function BoatLogbook({ boatId, userId }) {
+export default function BoatLogbook({ boatId, userId, isBaadsmand }) {
   const [logs, setLogs] = useState([])
   const [loading, setLoading] = useState(true)
   const [newLog, setNewLog] = useState('')
@@ -92,10 +92,10 @@ export default function BoatLogbook({ boatId, userId }) {
                 </div>
               </div>
               <p className="text-gray-800 text-sm whitespace-pre-wrap">{log.content}</p>
-              {log.user_id === userId && (
+              {(log.user_id === userId || isBaadsmand) && (
                 <div className="mt-2 text-right">
                   <button onClick={() => handleDelete(log.id)} className="text-xs text-red-500 hover:text-red-700 opacity-0 hover:opacity-100 transition-opacity">
-                    Slet
+                    {log.user_id === userId ? 'Slet' : 'Slet (Bådsmand)'}
                   </button>
                 </div>
               )}

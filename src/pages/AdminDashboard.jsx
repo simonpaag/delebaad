@@ -16,6 +16,7 @@ function TabBoats() {
       *,
       boat_members (
          user_id,
+         member_role,
          profiles ( name )
       )
     `)
@@ -50,9 +51,9 @@ function TabBoats() {
     fetchData()
   }
 
-  const handleAddMember = async (boatId, userId) => {
+  const handleAddMember = async (boatId, userId, role) => {
     if (!userId) return
-    const { error } = await supabase.from('boat_members').insert({ boat_id: boatId, user_id: userId })
+    const { error } = await supabase.from('boat_members').insert({ boat_id: boatId, user_id: userId, member_role: role })
     if (error) alert(error.message)
     fetchData()
   }
@@ -97,7 +98,12 @@ function TabBoats() {
                  {boat.boat_members?.length === 0 && <span className="text-xs text-gray-400">Ingen tilknyttet</span>}
                  {boat.boat_members?.map(member => (
                    <li key={member.user_id} className="flex justify-between items-center text-sm bg-white p-2 rounded border border-gray-100">
-                     <span>{member.profiles?.name || 'Ukendt Bruger'}</span>
+                     <span>
+                       {member.profiles?.name || 'Ukendt Bruger'}
+                       <span className={`ml-2 px-2 py-0.5 text-xs rounded-full ${member.member_role === 'baadsmand' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-600'}`}>
+                         {member.member_role === 'baadsmand' ? 'Bådsmand' : 'Sejler'}
+                       </span>
+                     </span>
                      <button onClick={() => handleRemoveMember(boat.id, member.user_id)} className="text-red-500 hover:text-red-700 p-1">
                        <Trash2 className="h-3 w-3" />
                      </button>
@@ -112,10 +118,15 @@ function TabBoats() {
                      <option key={u.id} value={u.id}>{u.name || 'Ukendt'} ({u.id.substring(0,6)}...)</option>
                    ))}
                  </select>
+                 <select id={`role-${boat.id}`} className="w-28 p-2 text-sm border rounded">
+                   <option value="sejler">Sejler</option>
+                   <option value="baadsmand">Bådsmand</option>
+                 </select>
                  <button 
                    onClick={() => {
                      const val = document.getElementById(`select-${boat.id}`).value;
-                     handleAddMember(boat.id, val);
+                     const role = document.getElementById(`role-${boat.id}`).value;
+                     if(val) handleAddMember(boat.id, val, role);
                    }} 
                    className="bg-gray-800 text-white px-3 py-1 rounded text-sm hover:bg-gray-700"
                  >

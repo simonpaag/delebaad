@@ -24,7 +24,8 @@ export default function BookingCalendar({
   onBook, 
   onDeleteBooking,
   userId,
-  loading 
+  loading,
+  isBaadsmand
 }) {
   const [currentMonth, setCurrentMonth] = useState(new Date())
   const [selection, setSelection] = useState({ start: null, end: null })
@@ -192,10 +193,12 @@ export default function BookingCalendar({
     setSelection({ start: null, end: null })
   }
 
-  // Tjek om vi har vist brugerens egne reservationer
-  const userBookingsDesc = [...bookings]
-    .filter(b => b.user_id === userId)
-    .sort((a,b) => new Date(a.start_date) - new Date(b.start_date))
+  // Tjek om vi har vist brugerens egne reservationer (eller alle hvis brugeren er Bådsmand)
+  const displayedBookings = isBaadsmand
+    ? [...bookings].sort((a,b) => new Date(a.start_date) - new Date(b.start_date))
+    : [...bookings]
+        .filter(b => b.user_id === userId)
+        .sort((a,b) => new Date(a.start_date) - new Date(b.start_date))
 
   return (
     <div className="mt-4 animate-in fade-in slide-in-from-top-4 duration-300">
@@ -236,16 +239,16 @@ export default function BookingCalendar({
           )}
         </div>
 
-        {/* Oversigt over egne bookinger */}
+        {/* Oversigt over egne (eller alle) bookinger */}
         <div className="w-full lg:w-72">
             <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">
-                Dine planlagte ture
+                {isBaadsmand ? 'Alle Bookinger (Bådsmand)' : 'Dine planlagte ture'}
             </h3>
-            {userBookingsDesc.length === 0 ? (
-                <p className="text-sm text-gray-500 italic">Du har ingen kommende bookinger på denne båd.</p>
+            {displayedBookings.length === 0 ? (
+                <p className="text-sm text-gray-500 italic">Ingen bookinger at vise.</p>
             ) : (
                 <ul className="space-y-3">
-                    {userBookingsDesc.map(b => (
+                    {displayedBookings.map(b => (
                         <li key={b.id} className="p-3 bg-white border border-gray-200 rounded-lg shadow-sm flex flex-col group justify-between items-start">
                             <span className="text-sm font-semibold text-gray-900">
                                 {format(parseISO(b.start_date), 'dd. MMM', { locale: da })} - {format(parseISO(b.end_date), 'dd. MMM', { locale: da })}

@@ -14,8 +14,16 @@ export default function UserDashboard() {
   const [bookings, setBookings] = useState([])
   const [calendarLoading, setCalendarLoading] = useState(false)
 
+  // Boat state
+  const [isEditingBoat, setIsEditingBoat] = useState(false)
+  const [editBoatData, setEditBoatData] = useState({})
+
   async function fetchBoats() {
-    const { data, error } = await supabase.from('boats').select('*')
+    if (!user) return
+    const { data, error } = await supabase.from('boats').select(`
+      *,
+      boat_members!inner(user_id, member_role)
+    `).eq('boat_members.user_id', user.id)
     if (error) {
       console.error('Fejl ved hentning af både', error)
       setLoading(false)
@@ -36,7 +44,28 @@ export default function UserDashboard() {
   // --- Kalender og Bookings logik ---
   const handleOpenCalendar = async (boat) => {
     setActiveBoat(boat)
+    setEditBoatData(boat)
     fetchBookings(boat.id)
+  }
+
+  const handleUpdateBoat = async (e) => {
+    e.preventDefault()
+    setLoading(true)
+    const { error } = await supabase.from('boats')
+      .update({
+        name: editBoatData.name,
+        location: editBoatData.location,
+        description: editBoatData.description
+      }).eq('id', activeBoat.id)
+      
+    if (error) {
+      alert('Fejl under opdatering: ' + error.message)
+    } else {
+      setActiveBoat({ ...activeBoat, ...editBoatData })
+      setIsEditingBoat(false)
+      fetchBoats()
+    }
+    setLoading(false)
   }
 
   const fetchBookings = async (boatId) => {
@@ -169,7 +198,7 @@ export default function UserDashboard() {
         ) : (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-6 lg:p-10 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex justify-between items-start border-b border-gray-100 pb-6 mb-6">
-              <div>
+              <div className="w-full">
                 <button 
                   onClick={() => setActiveBoat(null)}
                   className="text-sm text-blue-600 hover:text-blue-800 font-medium flex items-center mb-3"
@@ -177,26 +206,54 @@ export default function UserDashboard() {
                   <LogOut className="h-4 w-4 mr-1 rotate-180" />
                   Tilbage til oversigten
                 </button>
-                <h2 className="text-3xl font-bold text-gray-900 flex items-center">
-                  {activeBoat.name}
-                </h2>
-                <div className="flex items-center text-gray-500 mt-2">
-                  <MapPin className="h-4 w-4 mr-1" />
-                  {activeBoat.location}
-                </div>
+                
+                {isEditingBoat ? (
+                  <form onSubmit={handleUpdateBoat} className="mt-4 space-y-3 bg-gray-50 p-4 rounded-lg">
+                    <input type="text" value={editBoatData.name} onChange={e => setEditBoatData({...editBoatData, name: e.target.value})} className="w-full p-2 border rounded" placeholder="Bådens navn" required />
+                    <input type="text" value={editBoatData.location} onChange={e => setEditBoatData({...editBoatData, location: e.target.value})} className="w-full p-2 border rounded" placeholder="Lokation" />
+                    <textarea value={editBoatData.description} onChange={e => setEditBoatData({...editBoatData, description: e.target.value})} className="w-full p-2 border rounded" placeholder="Beskrivelse" rows="3" />
+                    <div className="flex gap-2">
+                       <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded text-sm hover:bg-blue-700">Gem Ændringer</button>
+                       <button type="button" onClick={() => setIsEditingBoat(false)} className="bg-gray-200 text-gray-800 px-4 py-2 rounded text-sm hover:bg-gray-300">Annuller</button>
+                    </div>
+                  </form>
+                ) : (
+                  <>
+                    <h2 className="text-3xl font-bold text-gray-900 flex items-center justify-between w-full">
+                      <span className="flex items-center gap-3">
+                         {activeBoat.name}
+                         {activeBoat.boat_members?.[0]?.member_role === 'baadsmand' && (
+                           <span className="bg-blue-100 text-blue-800 text-xs px-2 py-1 rounded-full border border-blue-200">
+                             Bådsmand Adgang
+                           </span>
+                         )}
+                      </span>
+                      <div className="flex items-center gap-2">
+                        {activeBoat.boat_members?.[0]?.member_role === 'baadsmand' && (
+                          <button onClick={() => setIsEditingBoat(true)} className="text-sm bg-gray-100 hover:bg-gray-200 px-3 py-1 rounded-md text-gray-700 transition">
+                            Rediger Båd
+                          </button>
+                        )}
+                        <button 
+                          onClick={() => setActiveBoat(null)}
+                          className="p-2 bg-gray-50 hover:bg-gray-100 rounded-full text-gray-400 transition-colors"
+                          title="Luk"
+                        >
+                            <X className="h-5 w-5" />
+                        </button>
+                      </div>
+                    </h2>
+                    <div className="flex items-center text-gray-500 mt-2">
+                      <MapPin className="h-4 w-4 mr-1" />
+                      {activeBoat.location}
+                    </div>
+                    <p className="text-gray-600 mt-4 mb-8 max-w-3xl leading-relaxed">
+                      {activeBoat.description}
+                    </p>
+                  </>
+                )}
               </div>
-              <button 
-                onClick={() => setActiveBoat(null)}
-                className="p-2 bg-gray-50 hover:bg-gray-100 rounded-full text-gray-400 transition-colors"
-                title="Luk"
-              >
-                  <X className="h-6 w-6" />
-              </button>
             </div>
-            
-            <p className="text-gray-600 mb-8 max-w-3xl leading-relaxed">
-              {activeBoat.description}
-            </p>
 
             {calendarLoading && bookings.length === 0 ? (
                <div className="py-20 text-center text-gray-400">Henter kalender...</div>
@@ -210,12 +267,14 @@ export default function UserDashboard() {
                      onDeleteBooking={handleDeleteBooking}
                      userId={user.id}
                      loading={calendarLoading}
+                     isBaadsmand={activeBoat.boat_members?.[0]?.member_role === 'baadsmand'}
                   />
                 </div>
                 <div className="w-full xl:w-[400px]">
                   <BoatLogbook 
                      boatId={activeBoat.id}
                      userId={user.id}
+                     isBaadsmand={activeBoat.boat_members?.[0]?.member_role === 'baadsmand'}
                   />
                 </div>
               </div>
