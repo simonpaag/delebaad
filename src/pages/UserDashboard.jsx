@@ -170,13 +170,16 @@ export default function UserDashboard() {
                   <span className="hidden sm:inline">Admin</span>
                 </button>
               )}
-              <button 
-                onClick={handleLogout}
-                className="flex items-center text-red-500 hover:text-red-700 font-medium px-3 py-1.5 rounded-md hover:bg-red-50 transition-colors"
-              >
-                Log ud
-                <LogOut className="h-4 w-4 ml-2" />
-              </button>
+              <div className="flex flex-col items-end">
+                <div className="text-[10px] text-gray-400 font-medium leading-none mb-1 mr-1">v1.1.0</div>
+                <button 
+                  onClick={handleLogout}
+                  className="flex items-center text-red-500 hover:text-red-700 font-medium px-3 py-1.5 rounded-md hover:bg-red-50 transition-colors leading-none"
+                >
+                  Log ud
+                  <LogOut className="h-4 w-4 ml-2" />
+                </button>
+              </div>
             </div>
           </div>
         </div>
