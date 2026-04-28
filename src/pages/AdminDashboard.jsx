@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { Settings, Users, Ship, Anchor, LogOut, Plus, Trash2, Mail, LayoutGrid, Copy } from 'lucide-react'
+import { Settings, Users, Ship, Anchor, LogOut, Plus, Trash2, Mail, LayoutGrid, Copy, Edit2 } from 'lucide-react'
 function TabBoats() {
   const [boats, setBoats] = useState([])
   const [allUsers, setAllUsers] = useState([])
@@ -8,6 +8,10 @@ function TabBoats() {
   
   // Form state
   const [newBoat, setNewBoat] = useState({ name: '', description: '', location: '' })
+  
+  // Edit state
+  const [editingBoat, setEditingBoat] = useState(null)
+  const [uploadingImage, setUploadingImage] = useState(false)
   
   async function fetchData() {
     setLoading(true)
@@ -81,6 +85,63 @@ function TabBoats() {
     fetchData()
   }
 
+  const handleUpdateBoat = async (e) => {
+    e.preventDefault()
+    if (!editingBoat) return
+    setLoading(true)
+    
+    const { error } = await supabase.from('boats').update({
+      name: editingBoat.name,
+      location: editingBoat.location,
+      description: editingBoat.description
+    }).eq('id', editingBoat.id)
+    
+    if (!error) {
+      setEditingBoat(null)
+      fetchData()
+    } else {
+      alert("Fejl ved opdatering: " + error.message)
+      setLoading(false)
+    }
+  }
+
+  const handleBoatImageUpload = async (e) => {
+    if (!e.target.files || e.target.files.length === 0) return
+    const file = e.target.files[0]
+    setUploadingImage(true)
+    
+    const fileExt = file.name.split('.').pop() || 'png'
+    const fileName = `${editingBoat.id}-${Date.now()}.${fileExt}`
+    
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from('boat_images')
+        .upload(fileName, file)
+        
+      if (uploadError) throw uploadError
+      
+      const { data: publicUrlData } = supabase.storage
+        .from('boat_images')
+        .getPublicUrl(fileName)
+        
+      const imageUrl = publicUrlData.publicUrl
+      
+      const { error: updateError } = await supabase
+        .from('boats')
+        .update({ image_url: imageUrl })
+        .eq('id', editingBoat.id)
+        
+      if (updateError) throw updateError
+      
+      setEditingBoat({ ...editingBoat, image_url: imageUrl })
+      setBoats(prev => prev.map(b => b.id === editingBoat.id ? { ...b, image_url: imageUrl } : b))
+    } catch (err) {
+      alert("Kunne ikke uploade billede: " + err.message)
+    } finally {
+      setUploadingImage(false)
+    }
+  }
+
   return (
     <div className="space-y-8 fade-in duration-300">
       <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
@@ -100,14 +161,24 @@ function TabBoats() {
         {loading ? <div className="text-gray-500">Indlæser...</div> : boats.map(boat => (
           <div key={boat.id} className="bg-white border rounded-xl overflow-hidden shadow-sm flex flex-col md:flex-row">
             <div className="p-6 md:w-1/2 flex flex-col justify-between border-b md:border-b-0 md:border-r border-gray-100">
-               <div>
+                <div>
+                 {boat.image_url && (
+                   <div className="mb-4 rounded-lg overflow-hidden border border-gray-100 max-w-sm">
+                     <img src={boat.image_url} alt={boat.name} className="w-full h-48 object-cover" />
+                   </div>
+                 )}
                  <h4 className="font-bold text-xl">{boat.name}</h4>
                  <p className="text-sm text-gray-500 my-1">{boat.location}</p>
                  <p className="text-gray-600 text-sm">{boat.description}</p>
                </div>
-               <button onClick={() => handleDeleteBoat(boat.id)} className="mt-4 flex items-center text-red-600 text-sm hover:underline">
-                 <Trash2 className="h-4 w-4 mr-1" /> Slet båd
-               </button>
+               <div className="mt-4 flex items-center space-x-4">
+                 <button onClick={() => setEditingBoat(boat)} className="flex items-center text-blue-600 text-sm hover:underline">
+                   <Edit2 className="h-4 w-4 mr-1" /> Rediger
+                 </button>
+                 <button onClick={() => handleDeleteBoat(boat.id)} className="flex items-center text-red-600 text-sm hover:underline">
+                   <Trash2 className="h-4 w-4 mr-1" /> Slet båd
+                 </button>
+               </div>
             </div>
             
             <div className="p-6 md:w-1/2 bg-gray-50">
@@ -155,6 +226,81 @@ function TabBoats() {
           </div>
         ))}
       </div>
+
+      {/* Rediger Båd Modal */}
+      {editingBoat && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-lg p-6 animate-fade-in max-h-[90vh] overflow-y-auto">
+            <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
+               <Ship className="mr-2 h-5 w-5 text-blue-600" /> Rediger Båd
+            </h3>
+            
+            <div className="mb-6 p-4 bg-gray-50 border border-gray-200 rounded-lg">
+              <label className="block text-sm font-medium text-gray-700 mb-2">Bådens Billede</label>
+              {editingBoat.image_url && (
+                <img src={editingBoat.image_url} alt="Båd" className="w-full h-40 object-cover rounded mb-3 border border-gray-200" />
+              )}
+              <div className="flex items-center">
+                <input 
+                  type="file" 
+                  accept="image/*" 
+                  onChange={handleBoatImageUpload} 
+                  disabled={uploadingImage}
+                  className="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100" 
+                />
+                {uploadingImage && <div className="animate-spin h-5 w-5 border-2 border-blue-500 border-t-transparent rounded-full ml-3"></div>}
+              </div>
+            </div>
+
+            <form onSubmit={handleUpdateBoat} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Navn</label>
+                <input 
+                  required 
+                  type="text" 
+                  value={editingBoat.name} 
+                  onChange={e => setEditingBoat({...editingBoat, name: e.target.value})} 
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Lokation</label>
+                <input 
+                  type="text" 
+                  value={editingBoat.location || ''} 
+                  onChange={e => setEditingBoat({...editingBoat, location: e.target.value})} 
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Beskrivelse</label>
+                <textarea 
+                  rows="3"
+                  value={editingBoat.description || ''} 
+                  onChange={e => setEditingBoat({...editingBoat, description: e.target.value})} 
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" 
+                />
+              </div>
+              <div className="flex justify-end space-x-3 pt-4 border-t border-gray-100">
+                <button 
+                  type="button" 
+                  onClick={() => setEditingBoat(null)} 
+                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition"
+                >
+                  Annuller
+                </button>
+                <button 
+                  type="submit" 
+                  disabled={loading}
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+                >
+                  Gem oplysninger
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
