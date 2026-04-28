@@ -288,7 +288,7 @@ function TabBoats() {
       {/* Rediger Båd Modal */}
       {editingBoat && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-lg w-full max-w-lg p-6 animate-fade-in max-h-[90vh] overflow-y-auto">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-lg p-4 sm:p-6 animate-fade-in max-h-[90vh] overflow-y-auto">
             <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center">
                <Ship className="mr-2 h-5 w-5 text-blue-600" /> Rediger Båd
             </h3>
@@ -374,7 +374,7 @@ function TabBoats() {
               </button>
             </div>
             
-            <div className="p-6">
+            <div className="p-2 sm:p-6">
               <BookingCalendar 
                  bookings={calendarBookings}
                  onBook={handleCreateAdminBooking}
@@ -467,9 +467,10 @@ function TabUsers() {
         </form>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border p-6">
+      <div className="bg-white rounded-xl shadow-sm border p-4 sm:p-6 overflow-hidden">
         <h3 className="text-lg font-bold text-gray-900 mb-4">Eksisterende Brugere</h3>
-      <table className="min-w-full divide-y divide-gray-200">
+        <div className="overflow-x-auto">
+          <table className="min-w-full divide-y divide-gray-200">
         <thead>
           <tr>
             <th className="px-6 py-3 bg-gray-50 text-left text-xs font-medium text-gray-500 uppercase tracking-wider rounded-tl-lg">Navn</th>
@@ -498,6 +499,7 @@ function TabUsers() {
           ))}
         </tbody>
       </table>
+      </div>
       </div>
     </div>
   )
@@ -711,8 +713,8 @@ function TabKanban() {
         <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
           <Plus className="mr-2 h-5 w-5 text-blue-600" /> Opret Opgave
         </h3>
-        <form onSubmit={handleCreateTicket} className="flex gap-4 items-start">
-          <div className="flex-1 space-y-3">
+        <form onSubmit={handleCreateTicket} className="flex flex-col sm:flex-row gap-4 items-start">
+          <div className="flex-1 w-full space-y-3">
              <input required type="text" placeholder="Opgave titel" value={newTicket.title} onChange={e => setNewTicket({...newTicket, title: e.target.value})} className="w-full p-2 border rounded-md" />
              <input type="text" placeholder="Kort beskrivelse (valgfri)" value={newTicket.description} onChange={e => setNewTicket({...newTicket, description: e.target.value})} className="w-full p-2 border rounded-md text-sm text-gray-600" />
           </div>
@@ -774,7 +776,7 @@ function TabKanban() {
       {/* Rediger Ticket Modal */}
       {editingTicket && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white rounded-xl shadow-lg w-full max-w-lg p-6 animate-fade-in">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-lg p-4 sm:p-6 animate-fade-in">
             <h3 className="text-xl font-bold text-gray-900 mb-4">Rediger Opgave</h3>
             <form onSubmit={handleUpdateTicket} className="space-y-4">
               <div>
@@ -873,7 +875,7 @@ export default function AdminDashboard({ onLogout }) {
 
       {/* Main Content */}
       <main className="flex-1 overflow-y-auto bg-gray-50/50">
-        <div className="p-6 md:p-10 max-w-6xl mx-auto">
+        <div className="p-4 sm:p-6 md:p-10 max-w-6xl mx-auto">
           <header className="mb-8 flex justify-between items-center md:block">
              <div>
                <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
@@ -881,11 +883,19 @@ export default function AdminDashboard({ onLogout }) {
                </h1>
              </div>
              
-             {/* Simpelt mobile menu alternativ (Logout via link istedet) */}
-             <div className="md:hidden flex space-x-2 border-b w-full mt-4 pb-2">
-                 {['boats','users','kanban','settings'].map(t => (
-                   <button key={t} onClick={() => setActiveTab(t)} className={`px-3 py-1 text-sm rounded capitalize ${activeTab === t ? 'bg-blue-100 text-blue-800' : 'text-gray-500'}`}>{t}</button>
-                 ))}
+             {/* Simpelt mobile menu alternativ */}
+             <div className="md:hidden mt-4">
+                 <div className="flex overflow-x-auto space-x-2 border-b pb-2 no-scrollbar">
+                   {['boats','users','kanban','settings'].map(t => (
+                     <button key={t} onClick={() => setActiveTab(t)} className={`flex-shrink-0 px-3 py-1.5 text-sm rounded capitalize ${activeTab === t ? 'bg-blue-100 text-blue-800' : 'text-gray-600 hover:bg-gray-100'}`}>{t === 'boats' ? 'Både' : t === 'users' ? 'Brugere' : t}</button>
+                   ))}
+                 </div>
+                 <div className="mt-3 flex justify-between items-center px-1">
+                   <div className="text-xs text-gray-500">Logget ind som admin</div>
+                   <button onClick={handleLogout} className="flex items-center text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 px-3 py-1.5 rounded-md transition-colors">
+                     <LogOut className="h-3.5 w-3.5 mr-1" /> Log ud
+                   </button>
+                 </div>
              </div>
           </header>
           
