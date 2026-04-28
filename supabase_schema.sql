@@ -88,12 +88,17 @@ using (
 
 -- BOAT_MEMBERS
 -- Brugere kan se deres eget medlemskab
+-- Funktion til at hente båd-id'er for en bruger sikkert uden at trigge recursion
+create or replace function public.get_user_boat_ids()
+returns setof uuid as $$
+begin
+  return query select bl.boat_id from public.boat_members bl where bl.user_id = auth.uid();
+end;
+$$ language plpgsql security definer;
+
 create policy "Users kan se deres tilknytninger og andres på samme båd" on public.boat_members for select to authenticated
 using (
-  boat_id in (
-    select bl.boat_id from public.boat_members bl
-    where bl.user_id = auth.uid()
-  )
+  boat_id in (select public.get_user_boat_ids())
 );
 
 -- BOOKINGS
@@ -264,10 +269,7 @@ create policy "Admins can do everything on boat_expenses" on public.boat_expense
 
 create policy "Users kan læse udgifter for deres både" on public.boat_expenses for select to authenticated
 using (
-  exists (
-    select 1 from public.boat_members bm
-    where bm.boat_id = boat_expenses.boat_id and bm.user_id = auth.uid()
-  )
+  boat_id in (select public.get_user_boat_ids())
 );
 
 create policy "Users kan oprette udgifter for deres både" on public.boat_expenses for insert to authenticated
@@ -345,3 +347,17 @@ CREATE TABLE IF NOT EXISTS public.admin_tickets (
 alter table public.admin_tickets enable row level security;
 
 create policy "Admins can do everything on admin_tickets" on public.admin_tickets to authenticated using (public.is_admin()) with check (public.is_admin());
+
+-- ==========================================
+-- KANBAN IMAGES STORAGE BUCKET
+-- ==========================================
+alter table public.admin_tickets add column if not exists image_url text;
+
+insert into storage.buckets (id, name, public) 
+values ('kanban_images', 'kanban_images', true)
+on conflict (id) do nothing;
+
+create policy "Admins can upload kanban images" on storage.objects for insert to authenticated with check (bucket_id = 'kanban_images' and public.is_admin());
+create policy "Admins can update kanban images" on storage.objects for update to authenticated using (bucket_id = 'kanban_images' and public.is_admin());
+create policy "Admins can delete kanban images" on storage.objects for delete to authenticated using (bucket_id = 'kanban_images' and public.is_admin());
+create policy "Public can view kanban images" on storage.objects for select using (bucket_id = 'kanban_images');

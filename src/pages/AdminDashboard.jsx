@@ -275,6 +275,7 @@ function TabSettings() {
 function TabKanban() {
   const [tickets, setTickets] = useState([])
   const [loading, setLoading] = useState(true)
+  const [uploadingImageFor, setUploadingImageFor] = useState(null)
   const [newTicket, setNewTicket] = useState({ title: '', description: '' })
   
   const columns = ['Ideas&bugs', 'Tickets', 'In production', 'Testing', 'Done']
@@ -310,6 +311,54 @@ function TabKanban() {
     if(!window.confirm('Slet opgave permanent?')) return
     await supabase.from('admin_tickets').delete().eq('id', id)
     fetchTickets()
+  }
+
+  const handleTicketPaste = async (e, ticketId) => {
+    const items = e.clipboardData?.items;
+    if (!items) return;
+
+    let imageFile = null;
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf('image') !== -1) {
+        imageFile = items[i].getAsFile();
+        break;
+      }
+    }
+
+    if (!imageFile) return;
+
+    e.preventDefault();
+    setUploadingImageFor(ticketId);
+
+    const fileExt = imageFile.name.split('.').pop() || 'png';
+    const fileName = `${ticketId}-${Date.now()}.${fileExt}`;
+
+    try {
+      const { error: uploadError } = await supabase.storage
+        .from('kanban_images')
+        .upload(fileName, imageFile);
+
+      if (uploadError) throw uploadError;
+
+      const { data: publicUrlData } = supabase.storage
+        .from('kanban_images')
+        .getPublicUrl(fileName);
+
+      const imageUrl = publicUrlData.publicUrl;
+
+      const { error: updateError } = await supabase
+        .from('admin_tickets')
+        .update({ image_url: imageUrl })
+        .eq('id', ticketId);
+
+      if (updateError) throw updateError;
+
+      setTickets(prev => prev.map(t => t.id === ticketId ? { ...t, image_url: imageUrl } : t));
+    } catch (err) {
+      alert("Fejl ved upload af billede: " + err.message);
+    } finally {
+      setUploadingImageFor(null);
+    }
   }
 
   const handleDragStart = (e, ticketId) => {
@@ -364,14 +413,29 @@ function TabKanban() {
                  <div 
                    key={ticket.id}
                    draggable
+                   tabIndex={0}
                    onDragStart={(e) => handleDragStart(e, ticket.id)}
-                   className="bg-white p-3 rounded shadow-sm border border-gray-200 cursor-grab active:cursor-grabbing hover:border-blue-400 transition"
+                   onPaste={(e) => handleTicketPaste(e, ticket.id)}
+                   className="bg-white p-3 rounded shadow-sm border border-gray-200 cursor-grab active:cursor-grabbing hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition group relative"
                  >
                    <div className="flex justify-between items-start mb-2">
                       <h5 className="font-semibold text-sm text-gray-900">{ticket.title}</h5>
                       <button onClick={() => handleDeleteTicket(ticket.id)} className="text-gray-400 hover:text-red-500"><Trash2 className="h-3 w-3" /></button>
                    </div>
-                   {ticket.description && <p className="text-xs text-gray-600">{ticket.description}</p>}
+                   {ticket.description && <p className="text-xs text-gray-600 mb-2">{ticket.description}</p>}
+                   
+                   {ticket.image_url && (
+                     <div className="mt-2 rounded overflow-hidden border border-gray-100">
+                       <img src={ticket.image_url} alt="Vedhæftet" className="w-full h-auto object-cover" />
+                     </div>
+                   )}
+                   
+                   {uploadingImageFor === ticket.id && (
+                     <div className="mt-2 text-xs text-blue-500 flex items-center">
+                        <div className="animate-spin h-3 w-3 border-2 border-blue-500 border-t-transparent rounded-full mr-2"></div>
+                        Uploader billede...
+                     </div>
+                   )}
                  </div>
                ))}
                {tickets.filter(t => t.status === col).length === 0 && !loading && (
