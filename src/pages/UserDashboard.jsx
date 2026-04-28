@@ -197,8 +197,11 @@ export default function UserDashboard() {
                 {boats.map((boat) => (
                   <div key={boat.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
                     <div className="h-48 bg-gray-100 relative overflow-hidden flex items-center justify-center">
-                      {/* Placeholder billede / Ikon */}
-                      <Ship className="h-24 w-24 text-gray-300" />
+                      {boat.image_url ? (
+                        <img src={boat.image_url} alt={boat.name} className="w-full h-full object-cover" />
+                      ) : (
+                        <Ship className="h-24 w-24 text-gray-300" />
+                      )}
                     </div>
                     <div className="p-6">
                       <h3 className="text-xl font-bold text-gray-900 flex items-center">
