@@ -279,7 +279,7 @@ function TabKanban() {
   const [editingTicket, setEditingTicket] = useState(null)
   const [newTicket, setNewTicket] = useState({ title: '', description: '' })
   
-  const columns = ['Ideas&bugs', 'Tickets', 'In production', 'Testing', 'Done']
+  const columns = ['Ideas&bugs', 'Tickets', 'Done']
 
   async function fetchTickets() {
     setLoading(true)
