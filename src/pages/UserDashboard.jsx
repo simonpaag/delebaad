@@ -1,14 +1,16 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import { Ship, Calendar as CalendarIcon, MapPin, LogOut, X, Download, Share } from 'lucide-react'
+import { useNavigate } from 'react-router-dom'
+import { Ship, Calendar as CalendarIcon, MapPin, LogOut, X, Download, Share, Settings } from 'lucide-react'
 import { useInstallPrompt } from '../hooks/useInstallPrompt'
 import BookingCalendar from '../components/BookingCalendar'
 import BoatLogbook from '../components/BoatLogbook'
 import BoatTasks from '../components/BoatTasks'
 import BoatExpenses from '../components/BoatExpenses'
 export default function UserDashboard() {
-  const { user } = useAuth()
+  const { user, isAdmin } = useAuth()
+  const navigate = useNavigate()
   const [boats, setBoats] = useState([])
   const [loading, setLoading] = useState(true)
   
@@ -155,7 +157,17 @@ export default function UserDashboard() {
                   className="flex items-center text-blue-600 hover:text-blue-800 font-medium px-3 py-1.5 rounded-md hover:bg-blue-50 transition-colors"
                 >
                   <Download className="h-4 w-4 mr-2" />
-                  Installer App
+                  <span className="hidden sm:inline">Installer App</span>
+                </button>
+              )}
+              {isAdmin && (
+                <button 
+                  onClick={() => navigate('/admin')}
+                  className="flex items-center text-gray-700 hover:text-gray-900 font-medium px-3 py-1.5 rounded-md hover:bg-gray-100 transition-colors"
+                  title="Gå til Admin Panel"
+                >
+                  <Settings className="h-4 w-4 mr-2" />
+                  <span className="hidden sm:inline">Admin</span>
                 </button>
               )}
               <button 
