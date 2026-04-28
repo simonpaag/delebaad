@@ -12,7 +12,7 @@ function TabBoats() {
   async function fetchData() {
     setLoading(true)
     // Hent både
-    const { data: bData } = await supabase.from('boats').select(`
+    const { data: bData, error: bError } = await supabase.from('boats').select(`
       *,
       boat_members (
          user_id,
@@ -20,8 +20,17 @@ function TabBoats() {
          profiles ( name )
       )
     `)
+    
+    if (bError) {
+      console.error("Fejl ved hentning af både:", bError)
+      alert("Fejl ved hentning af både: " + bError.message)
+    }
+
     // Hent brugere (til dropdown)
-    const { data: uData } = await supabase.from('profiles').select('*')
+    const { data: uData, error: uError } = await supabase.from('profiles').select('*')
+    if (uError) {
+      console.error("Fejl ved hentning af brugere:", uError)
+    }
     
     if (bData) setBoats(bData)
     if (uData) setAllUsers(uData)
@@ -31,6 +40,8 @@ function TabBoats() {
   useEffect(() => {
     fetchData()
   }, [])
+
+  console.log("Current boats state:", boats)
 
   const handleCreateBoat = async (e) => {
     e.preventDefault()
