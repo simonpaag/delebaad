@@ -276,6 +276,7 @@ function TabKanban() {
   const [tickets, setTickets] = useState([])
   const [loading, setLoading] = useState(true)
   const [uploadingImageFor, setUploadingImageFor] = useState(null)
+  const [editingTicket, setEditingTicket] = useState(null)
   const [newTicket, setNewTicket] = useState({ title: '', description: '' })
   
   const columns = ['Ideas&bugs', 'Tickets', 'In production', 'Testing', 'Done']
@@ -365,6 +366,23 @@ function TabKanban() {
     e.dataTransfer.setData('ticketId', ticketId)
   }
 
+  const handleUpdateTicket = async (e) => {
+    e.preventDefault()
+    if (!editingTicket || !editingTicket.title) return
+    
+    const { error } = await supabase.from('admin_tickets').update({
+      title: editingTicket.title,
+      description: editingTicket.description
+    }).eq('id', editingTicket.id)
+    
+    if (!error) {
+      setTickets(prev => prev.map(t => t.id === editingTicket.id ? { ...t, title: editingTicket.title, description: editingTicket.description } : t))
+      setEditingTicket(null)
+    } else {
+      alert("Fejl ved opdatering: " + error.message)
+    }
+  }
+
   const handleCopyTicket = (ticket) => {
     const textToCopy = `Titel: ${ticket.title}\nBeskrivelse: ${ticket.description || 'Ingen beskrivelse'}`;
     navigator.clipboard.writeText(textToCopy).then(() => {
@@ -423,15 +441,16 @@ function TabKanban() {
                    key={ticket.id}
                    draggable
                    tabIndex={0}
+                   onClick={() => setEditingTicket(ticket)}
                    onDragStart={(e) => handleDragStart(e, ticket.id)}
                    onPaste={(e) => handleTicketPaste(e, ticket.id)}
                    className="bg-white p-3 rounded shadow-sm border border-gray-200 cursor-grab active:cursor-grabbing hover:border-blue-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition group relative"
                  >
                    <div className="flex justify-between items-start mb-2">
-                      <h5 className="font-semibold text-sm text-gray-900">{ticket.title}</h5>
-                      <div className="flex space-x-2">
-                        <button onClick={() => handleCopyTicket(ticket)} title="Kopiér til Antigravity" className="text-gray-400 hover:text-blue-500"><Copy className="h-3 w-3" /></button>
-                        <button onClick={() => handleDeleteTicket(ticket.id)} title="Slet opgave" className="text-gray-400 hover:text-red-500"><Trash2 className="h-3 w-3" /></button>
+                      <h5 className="font-semibold text-sm text-gray-900 pr-2">{ticket.title}</h5>
+                      <div className="flex space-x-2 flex-shrink-0">
+                        <button onClick={(e) => { e.stopPropagation(); handleCopyTicket(ticket); }} title="Kopiér til Antigravity" className="text-gray-400 hover:text-blue-500"><Copy className="h-3 w-3" /></button>
+                        <button onClick={(e) => { e.stopPropagation(); handleDeleteTicket(ticket.id); }} title="Slet opgave" className="text-gray-400 hover:text-red-500"><Trash2 className="h-3 w-3" /></button>
                       </div>
                    </div>
                    {ticket.description && <p className="text-xs text-gray-600 mb-2">{ticket.description}</p>}
@@ -457,6 +476,52 @@ function TabKanban() {
           </div>
         ))}
       </div>
+
+      {/* Rediger Ticket Modal */}
+      {editingTicket && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl shadow-lg w-full max-w-lg p-6 animate-fade-in">
+            <h3 className="text-xl font-bold text-gray-900 mb-4">Rediger Opgave</h3>
+            <form onSubmit={handleUpdateTicket} className="space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Titel</label>
+                <input 
+                  required 
+                  type="text" 
+                  value={editingTicket.title} 
+                  onChange={e => setEditingTicket({...editingTicket, title: e.target.value})} 
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" 
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Beskrivelse</label>
+                <textarea 
+                  rows="4"
+                  value={editingTicket.description || ''} 
+                  onChange={e => setEditingTicket({...editingTicket, description: e.target.value})} 
+                  className="w-full p-2 border border-gray-300 rounded-md focus:ring-blue-500 focus:border-blue-500" 
+                  placeholder="Tilføj en længere beskrivelse..."
+                />
+              </div>
+              <div className="flex justify-end space-x-3 pt-4 border-t border-gray-100">
+                <button 
+                  type="button" 
+                  onClick={() => setEditingTicket(null)} 
+                  className="px-4 py-2 text-gray-700 hover:bg-gray-100 rounded-md transition"
+                >
+                  Annuller
+                </button>
+                <button 
+                  type="submit" 
+                  className="px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700 transition"
+                >
+                  Gem ændringer
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
