@@ -51,10 +51,10 @@ export default function UserDashboard() {
   }
 
   // --- Kalender og Bookings logik ---
-  const handleOpenCalendar = async (boat) => {
+  const handleOpenTab = async (boat, tabName) => {
     setActiveBoat(boat)
     setEditBoatData(boat)
-    setActiveTab('booking')
+    setActiveTab(tabName)
     fetchBookings(boat.id)
   }
 
@@ -215,13 +215,41 @@ export default function UserDashboard() {
                         {boat.description || 'Ingen beskrivelse tilgængelig.'}
                       </p>
                       
-                      <div className="mt-6">
+                      <div className="mt-6 grid grid-cols-2 gap-2">
                         <button 
-                          onClick={() => handleOpenCalendar(boat)}
-                          className="w-full flex items-center justify-center px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-blue-600 hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                          onClick={() => handleOpenTab(boat, 'booking')}
+                          className="w-full flex items-center justify-center px-2 py-2 border border-blue-100 rounded-md shadow-sm text-xs font-medium text-blue-700 bg-blue-50 hover:bg-blue-100 focus:outline-none transition-colors"
                         >
-                          <CalendarIcon className="h-4 w-4 mr-2" />
-                          Kalender og Booking
+                          <CalendarIcon className="h-3.5 w-3.5 mr-1.5" />
+                          Kalender
+                        </button>
+                        <button 
+                          onClick={() => handleOpenTab(boat, 'logbook')}
+                          className="w-full flex items-center justify-center px-2 py-2 border border-green-100 rounded-md shadow-sm text-xs font-medium text-green-700 bg-green-50 hover:bg-green-100 focus:outline-none transition-colors"
+                        >
+                          <svg className="h-3.5 w-3.5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
+                          </svg>
+                          Logbog
+                        </button>
+                        <button 
+                          onClick={() => handleOpenTab(boat, 'tasks')}
+                          className="w-full flex items-center justify-center px-2 py-2 border border-purple-100 rounded-md shadow-sm text-xs font-medium text-purple-700 bg-purple-50 hover:bg-purple-100 focus:outline-none transition-colors"
+                        >
+                          <svg className="h-3.5 w-3.5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                          </svg>
+                          Drift & Opgaver
+                        </button>
+                        <button 
+                          onClick={() => handleOpenTab(boat, 'expenses')}
+                          className="w-full flex items-center justify-center px-2 py-2 border border-orange-100 rounded-md shadow-sm text-xs font-medium text-orange-700 bg-orange-50 hover:bg-orange-100 focus:outline-none transition-colors"
+                        >
+                          <svg className="h-3.5 w-3.5 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          Fællesøkonomi
                         </button>
                       </div>
                     </div>
@@ -296,32 +324,34 @@ export default function UserDashboard() {
               <div>
                 {/* TABS */}
                 <div className="flex flex-wrap space-x-1 border-b border-gray-200 mb-6 bg-gray-50/80 p-1 rounded-t-lg">
-                  <button onClick={() => setActiveTab('booking')} className={`px-4 py-2.5 text-sm font-medium rounded-md transition ${activeTab === 'booking' ? 'bg-white shadow-sm text-blue-600 border border-gray-100' : 'text-gray-500 hover:text-gray-900 border border-transparent'}`}>Kalender & Logbog</button>
+                  <button onClick={() => setActiveTab('booking')} className={`px-4 py-2.5 text-sm font-medium rounded-md transition ${activeTab === 'booking' ? 'bg-white shadow-sm text-blue-600 border border-gray-100' : 'text-gray-500 hover:text-gray-900 border border-transparent'}`}>Kalender</button>
+                  <button onClick={() => setActiveTab('logbook')} className={`px-4 py-2.5 text-sm font-medium rounded-md transition ${activeTab === 'logbook' ? 'bg-white shadow-sm text-blue-600 border border-gray-100' : 'text-gray-500 hover:text-gray-900 border border-transparent'}`}>Logbog</button>
                   <button onClick={() => setActiveTab('tasks')} className={`px-4 py-2.5 text-sm font-medium rounded-md transition ${activeTab === 'tasks' ? 'bg-white shadow-sm text-blue-600 border border-gray-100' : 'text-gray-500 hover:text-gray-900 border border-transparent'}`}>Drift & Opgaver</button>
                   <button onClick={() => setActiveTab('expenses')} className={`px-4 py-2.5 text-sm font-medium rounded-md transition ${activeTab === 'expenses' ? 'bg-white shadow-sm text-blue-600 border border-gray-100' : 'text-gray-500 hover:text-gray-900 border border-transparent'}`}>Fællesøkonomi</button>
                 </div>
                 
                 {/* INDHOLD AFHÆNGIG AF TAB */}
                 {activeTab === 'booking' && (
-                  <div className="flex flex-col xl:flex-row gap-8">
-                    <div className="flex-1">
-                      <BookingCalendar 
-                         boatId={activeBoat.id}
-                         bookings={bookings}
-                         onBook={handleCreateBooking}
-                         onDeleteBooking={handleDeleteBooking}
-                         userId={user.id}
-                         loading={calendarLoading}
-                         isBaadsmand={activeBoat.boat_members?.[0]?.member_role === 'baadsmand'}
-                      />
-                    </div>
-                    <div className="w-full xl:w-[400px]">
-                      <BoatLogbook 
-                         boatId={activeBoat.id}
-                         userId={user.id}
-                         isBaadsmand={activeBoat.boat_members?.[0]?.member_role === 'baadsmand'}
-                      />
-                    </div>
+                  <div>
+                    <BookingCalendar 
+                       boatId={activeBoat.id}
+                       bookings={bookings}
+                       onBook={handleCreateBooking}
+                       onDeleteBooking={handleDeleteBooking}
+                       userId={user.id}
+                       loading={calendarLoading}
+                       isBaadsmand={activeBoat.boat_members?.[0]?.member_role === 'baadsmand'}
+                    />
+                  </div>
+                )}
+
+                {activeTab === 'logbook' && (
+                  <div>
+                    <BoatLogbook 
+                       boatId={activeBoat.id}
+                       userId={user.id}
+                       isBaadsmand={activeBoat.boat_members?.[0]?.member_role === 'baadsmand'}
+                    />
                   </div>
                 )}
                 
