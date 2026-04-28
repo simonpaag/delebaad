@@ -134,7 +134,7 @@ export default function BookingCalendar({
         // Hent bookinger for at vise små prikker
         const dayBookings = getBookingsForDay(day)
         const hasBookings = dayBookings.length > 0
-        const hasOwnBooking = dayBookings.some(b => b.user_id === userId)
+        const hasOwnBooking = userId && dayBookings.some(b => b.user_id === userId)
         const fullyBooked = TIMESLOTS.every(slot => isTimeslotBooked(day, slot))
 
         let isSelected = selectedDate && isSameDay(day, selectedDate)
@@ -191,7 +191,7 @@ export default function BookingCalendar({
   }
 
   const handleBookTimeslot = (slot) => {
-    if(!selectedDate) return
+    if(!selectedDate || !onBook) return
     
     const slotStart = setMilliseconds(setSeconds(setMinutes(setHours(selectedDate, slot.startHour), 0), 0), 0)
     const slotEnd = setMilliseconds(setSeconds(setMinutes(setHours(selectedDate, slot.endHour), 0), 0), 0)
@@ -246,21 +246,26 @@ export default function BookingCalendar({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     {TIMESLOTS.map((slot, idx) => {
                       const booked = isTimeslotBooked(selectedDate, slot)
+                      const isReadOnly = !onBook
                       return (
                         <button
                           key={idx}
-                          disabled={booked || loading}
+                          disabled={booked || loading || isReadOnly}
                           onClick={() => handleBookTimeslot(slot)}
                           className={`
                             flex items-center justify-between p-3 rounded-lg border text-sm font-medium transition-all
                             ${booked 
                               ? 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed' 
-                              : 'bg-white border-blue-200 text-blue-800 hover:bg-blue-50 hover:border-blue-300 cursor-pointer shadow-sm'}
+                              : isReadOnly
+                                ? 'bg-white border-blue-200 text-blue-800 cursor-default shadow-sm'
+                                : 'bg-white border-blue-200 text-blue-800 hover:bg-blue-50 hover:border-blue-300 cursor-pointer shadow-sm'}
                           `}
                         >
                           <span>{slot.label}</span>
                           {booked ? (
                             <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded">Booket</span>
+                          ) : isReadOnly ? (
+                            <span className="text-xs bg-blue-50 text-blue-600 px-2 py-1 rounded">Ledig</span>
                           ) : (
                             <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">Ledig - Reserver</span>
                           )}
@@ -274,40 +279,44 @@ export default function BookingCalendar({
 
         {/* Oversigt over egne (eller alle) bookinger */}
         <div className="w-full lg:w-80">
-            <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">
-                {isBaadsmand ? 'Alle Bookinger (Bådsmand)' : 'Dine planlagte ture'}
-            </h3>
-            {displayedBookings.length === 0 ? (
-                <p className="text-sm text-gray-500 italic">Ingen bookinger at vise.</p>
-            ) : (
-                <ul className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
-                    {displayedBookings.map(b => (
-                        <li key={b.id} className="p-3 bg-white border border-gray-200 rounded-lg shadow-sm flex flex-col group items-start">
-                            <span className="text-sm font-semibold text-gray-900 mb-1">
-                                {format(parseISO(b.start_date), 'dd. MMM yyyy', { locale: da })}
-                            </span>
-                            <span className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded-md mb-3">
-                                {format(parseISO(b.start_date), 'HH:mm', { locale: da })} - {format(parseISO(b.end_date), 'HH:mm', { locale: da })}
-                            </span>
-                            
-                            <div className="w-full flex justify-end">
-                                <button 
-                                  onClick={() => onDeleteBooking(b.id)}
-                                  className="text-gray-400 hover:text-red-600 transition-colors flex items-center text-xs bg-gray-50 hover:bg-red-50 px-2 py-1 rounded border"
-                                  title="Afmeld tur"
-                                >
-                                    <Trash2 className="w-3.5 h-3.5 mr-1" />
-                                    Afmeld tur
-                                </button>
-                            </div>
-                        </li>
-                    ))}
-                </ul>
+            {onBook && (
+              <>
+                <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">
+                    {isBaadsmand ? 'Alle Bookinger (Bådsmand)' : 'Dine planlagte ture'}
+                </h3>
+                {displayedBookings.length === 0 ? (
+                    <p className="text-sm text-gray-500 italic">Ingen bookinger at vise.</p>
+                ) : (
+                    <ul className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
+                        {displayedBookings.map(b => (
+                            <li key={b.id} className="p-3 bg-white border border-gray-200 rounded-lg shadow-sm flex flex-col group items-start">
+                                <span className="text-sm font-semibold text-gray-900 mb-1">
+                                    {format(parseISO(b.start_date), 'dd. MMM yyyy', { locale: da })}
+                                </span>
+                                <span className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded-md mb-3">
+                                    {format(parseISO(b.start_date), 'HH:mm', { locale: da })} - {format(parseISO(b.end_date), 'HH:mm', { locale: da })}
+                                </span>
+                                
+                                <div className="w-full flex justify-end">
+                                    <button 
+                                      onClick={() => onDeleteBooking(b.id)}
+                                      className="text-gray-400 hover:text-red-600 transition-colors flex items-center text-xs bg-gray-50 hover:bg-red-50 px-2 py-1 rounded border"
+                                      title="Afmeld tur"
+                                    >
+                                        <Trash2 className="w-3.5 h-3.5 mr-1" />
+                                        Afmeld tur
+                                    </button>
+                                </div>
+                            </li>
+                        ))}
+                    </ul>
+                )}
+              </>
             )}
             
-            <div className="mt-6 p-4 bg-gray-50 border border-gray-100 rounded-lg text-xs leading-relaxed text-gray-600 space-y-2">
-                <p className="flex items-center"><span className="inline-block w-3 h-3 bg-green-500 rounded-full mr-2 flex-shrink-0"></span>Dato med din reservation</p>
-                <p className="flex items-center"><span className="inline-block w-3 h-3 bg-gray-400 rounded-full mr-2 flex-shrink-0"></span>Dato med andres reservation</p>
+            <div className={`p-4 bg-gray-50 border border-gray-100 rounded-lg text-xs leading-relaxed text-gray-600 space-y-2 ${onBook ? 'mt-6' : 'mt-0'}`}>
+                {onBook && <p className="flex items-center"><span className="inline-block w-3 h-3 bg-green-500 rounded-full mr-2 flex-shrink-0"></span>Dato med din reservation</p>}
+                <p className="flex items-center"><span className="inline-block w-3 h-3 bg-gray-400 rounded-full mr-2 flex-shrink-0"></span>Dato med {onBook ? 'andres ' : ''}reservation</p>
                 <p className="flex items-center"><span className="inline-block w-4 h-px bg-gray-900 rotate-45 mr-2 flex-shrink-0"></span>Fuldt booket dato</p>
             </div>
         </div>

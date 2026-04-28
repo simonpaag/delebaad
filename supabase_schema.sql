@@ -133,6 +133,9 @@ using (auth.uid() = user_id);
 -- Alle brugere kan læse globale settings
 create policy "Alle kan læse settings" on public.settings for select to authenticated using (true);
 
+-- Offentlig adgang til udvalgte tabeller
+create policy "Public kan læse både" on public.boats for select using (true);
+create policy "Public kan læse bookinger" on public.bookings for select using (true);
 -- 6. Trigger for automatisk oprettelse af public.profiles række med rolle 'user'
 create or replace function public.handle_new_user()
 returns trigger as $$
@@ -401,4 +404,8 @@ begin
   return new;
 end;
 $$ language plpgsql security definer;
+
+-- Nye politikker til public boat sider
+create policy "Public kan læse både" on public.boats for select using (true);
+create policy "Public kan læse bookinger" on public.bookings for select using (true);
 */

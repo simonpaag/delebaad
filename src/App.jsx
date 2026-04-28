@@ -5,6 +5,8 @@ import Login from './pages/Login'
 import UserDashboard from './pages/UserDashboard'
 import AdminDashboard from './pages/AdminDashboard'
 
+import PublicBoat from './pages/PublicBoat'
+
 // Protected Route: Kun for indloggede brugere
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth()
@@ -33,6 +35,7 @@ function AppContent() {
     <Routes>
       <Route path="/" element={<RootRoute />} />
       <Route path="/login" element={<Login />} />
+      <Route path="/boat/:id" element={<PublicBoat />} />
       <Route
         path="/dashboard"
         element={
