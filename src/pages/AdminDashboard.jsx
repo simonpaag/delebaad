@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { Settings, Users, Ship, Anchor, LogOut, Plus, Trash2, Mail } from 'lucide-react'
+import { Settings, Users, Ship, Anchor, LogOut, Plus, Trash2, Mail, LayoutGrid } from 'lucide-react'
 function TabBoats() {
   const [boats, setBoats] = useState([])
   const [allUsers, setAllUsers] = useState([])
@@ -35,12 +35,19 @@ function TabBoats() {
   const handleCreateBoat = async (e) => {
     e.preventDefault()
     setLoading(true)
-    const { error } = await supabase.from('boats').insert(newBoat)
-    if (!error) {
-      setNewBoat({ name: '', description: '', location: '' })
-      fetchData()
-    } else {
-      alert(error.message)
+    try {
+      const { error } = await supabase.from('boats').insert(newBoat)
+      if (!error) {
+        setNewBoat({ name: '', description: '', location: '' })
+        await fetchData()
+      } else {
+        console.error("Supabase insert error:", error)
+        alert('Kunne ikke gemme båd: ' + error.message)
+        setLoading(false)
+      }
+    } catch (err) {
+      console.error("JS exception during insert:", err)
+      alert('Systemfejl: ' + err.message)
       setLoading(false)
     }
   }
@@ -254,6 +261,119 @@ function TabSettings() {
   )
 }
 
+function TabKanban() {
+  const [tickets, setTickets] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [newTicket, setNewTicket] = useState({ title: '', description: '' })
+  
+  const columns = ['Ideas&bugs', 'Tickets', 'In production', 'Testing', 'Done']
+
+  async function fetchTickets() {
+    setLoading(true)
+    const { data } = await supabase.from('admin_tickets').select('*').order('created_at', { ascending: false })
+    if (data) setTickets(data)
+    setLoading(false)
+  }
+
+  useEffect(() => {
+    fetchTickets()
+  }, [])
+
+  const handleCreateTicket = async (e) => {
+    e.preventDefault()
+    if (!newTicket.title) return
+    const { error } = await supabase.from('admin_tickets').insert({
+      title: newTicket.title,
+      description: newTicket.description,
+      status: 'Ideas&bugs'
+    })
+    if (!error) {
+      setNewTicket({ title: '', description: '' })
+      fetchTickets()
+    } else {
+      alert("Fejl ved oprettelse: " + error.message)
+    }
+  }
+
+  const handleDeleteTicket = async (id) => {
+    if(!window.confirm('Slet opgave permanent?')) return
+    await supabase.from('admin_tickets').delete().eq('id', id)
+    fetchTickets()
+  }
+
+  const handleDragStart = (e, ticketId) => {
+    e.dataTransfer.setData('ticketId', ticketId)
+  }
+
+  const handleDrop = async (e, targetStatus) => {
+    e.preventDefault()
+    const ticketId = e.dataTransfer.getData('ticketId')
+    if (!ticketId) return
+    
+    // Optimistic update
+    setTickets(prev => prev.map(t => t.id === ticketId ? { ...t, status: targetStatus } : t))
+    
+    const { error } = await supabase.from('admin_tickets').update({ status: targetStatus }).eq('id', ticketId)
+    if (error) {
+       alert("Kunne ikke flytte opgave: " + error.message)
+       fetchTickets()
+    }
+  }
+
+  const handleDragOver = (e) => {
+    e.preventDefault()
+  }
+
+  return (
+    <div className="space-y-6 fade-in duration-300">
+      <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+        <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+          <Plus className="mr-2 h-5 w-5 text-blue-600" /> Opret Opgave
+        </h3>
+        <form onSubmit={handleCreateTicket} className="flex gap-4 items-start">
+          <div className="flex-1 space-y-3">
+             <input required type="text" placeholder="Opgave titel" value={newTicket.title} onChange={e => setNewTicket({...newTicket, title: e.target.value})} className="w-full p-2 border rounded-md" />
+             <input type="text" placeholder="Kort beskrivelse (valgfri)" value={newTicket.description} onChange={e => setNewTicket({...newTicket, description: e.target.value})} className="w-full p-2 border rounded-md text-sm text-gray-600" />
+          </div>
+          <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded-md hover:bg-blue-700 transition">Tilføj Opgave</button>
+        </form>
+      </div>
+
+      <div className="flex gap-4 overflow-x-auto pb-4 items-start h-[600px]">
+        {columns.map(col => (
+          <div 
+            key={col} 
+            className="flex-shrink-0 w-72 bg-gray-100 rounded-lg p-4 flex flex-col min-h-full border border-gray-200"
+            onDragOver={handleDragOver}
+            onDrop={(e) => handleDrop(e, col)}
+          >
+            <h4 className="font-bold text-gray-700 mb-3 border-b border-gray-300 pb-2">{col}</h4>
+            <div className="flex-1 flex flex-col gap-3 overflow-y-auto">
+               {tickets.filter(t => t.status === col).map(ticket => (
+                 <div 
+                   key={ticket.id}
+                   draggable
+                   onDragStart={(e) => handleDragStart(e, ticket.id)}
+                   className="bg-white p-3 rounded shadow-sm border border-gray-200 cursor-grab active:cursor-grabbing hover:border-blue-400 transition"
+                 >
+                   <div className="flex justify-between items-start mb-2">
+                      <h5 className="font-semibold text-sm text-gray-900">{ticket.title}</h5>
+                      <button onClick={() => handleDeleteTicket(ticket.id)} className="text-gray-400 hover:text-red-500"><Trash2 className="h-3 w-3" /></button>
+                   </div>
+                   {ticket.description && <p className="text-xs text-gray-600">{ticket.description}</p>}
+                 </div>
+               ))}
+               {tickets.filter(t => t.status === col).length === 0 && !loading && (
+                 <div className="text-xs text-gray-400 text-center py-4 border-2 border-dashed border-gray-200 rounded">Træk hertil</div>
+               )}
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 export default function AdminDashboard() {
   const [activeTab, setActiveTab] = useState('boats')
   
@@ -277,6 +397,9 @@ export default function AdminDashboard() {
           <button onClick={() => setActiveTab('users')} className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeTab === 'users' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`}>
             <Users className="h-5 w-5 mr-3 flex-shrink-0" /> Brugere
           </button>
+          <button onClick={() => setActiveTab('kanban')} className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeTab === 'kanban' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`}>
+            <LayoutGrid className="h-5 w-5 mr-3 flex-shrink-0" /> Opgaver / Kanban
+          </button>
           <button onClick={() => setActiveTab('settings')} className={`w-full flex items-center px-4 py-3 text-sm font-medium rounded-lg transition-colors ${activeTab === 'settings' ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'}`}>
             <Settings className="h-5 w-5 mr-3 flex-shrink-0" /> Indstillinger
           </button>
@@ -295,14 +418,14 @@ export default function AdminDashboard() {
           <header className="mb-8 flex justify-between items-center md:block">
              <div>
                <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
-                 {activeTab === 'boats' ? 'Både & Tilknytninger' : activeTab === 'users' ? 'Brugere' : 'Indstillinger'}
+                 {activeTab === 'boats' ? 'Både & Tilknytninger' : activeTab === 'users' ? 'Brugere' : activeTab === 'kanban' ? 'Opgaver / Kanban' : 'Indstillinger'}
                </h1>
              </div>
              
              {/* Simpelt mobile menu alternativ (Logout via link istedet) */}
              <div className="md:hidden flex space-x-2 border-b w-full mt-4 pb-2">
-                 {['boats','users','settings'].map(t => (
-                   <button key={t} onClick={() => setActiveTab(t)} className={`px-3 py-1 text-sm rounded ${activeTab === t ? 'bg-blue-100 text-blue-800' : 'text-gray-500'}`}>{t}</button>
+                 {['boats','users','kanban','settings'].map(t => (
+                   <button key={t} onClick={() => setActiveTab(t)} className={`px-3 py-1 text-sm rounded capitalize ${activeTab === t ? 'bg-blue-100 text-blue-800' : 'text-gray-500'}`}>{t}</button>
                  ))}
              </div>
           </header>
@@ -310,6 +433,7 @@ export default function AdminDashboard() {
           <div className="mt-6">
             {activeTab === 'boats' && <TabBoats />}
             {activeTab === 'users' && <TabUsers />}
+            {activeTab === 'kanban' && <TabKanban />}
             {activeTab === 'settings' && <TabSettings />}
           </div>
         </div>

@@ -329,3 +329,19 @@ using (
 
 create policy "Bådsmænd kan slette opgaver" on public.boat_tasks for delete to authenticated
 using (auth.uid() = created_by OR public.is_baadsmand(boat_id));
+
+-- ==========================================
+-- ADMIN KANBAN BOARD (TICKETS)
+-- ==========================================
+
+CREATE TABLE IF NOT EXISTS public.admin_tickets (
+  id uuid default gen_random_uuid() primary key,
+  title text not null,
+  description text,
+  status text not null default 'Ideas&bugs' check (status in ('Ideas&bugs', 'Tickets', 'In production', 'Testing', 'Done')),
+  created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.admin_tickets enable row level security;
+
+create policy "Admins can do everything on admin_tickets" on public.admin_tickets to authenticated using (public.is_admin()) with check (public.is_admin());
