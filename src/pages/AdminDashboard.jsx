@@ -1,12 +1,15 @@
 import React, { useState, useEffect } from 'react'
 import { supabase, supabaseUrl, supabaseAnonKey } from '../lib/supabase'
 import { createClient } from '@supabase/supabase-js'
-import { Settings, Users, Ship, Anchor, LogOut, Plus, Trash2, Mail, LayoutGrid, Copy, Edit2, Download, Share } from 'lucide-react'
+import { Settings, Users, Ship, Anchor, LogOut, Plus, Trash2, Mail, LayoutGrid, Copy, Edit2, Download, Share, Calendar as CalendarIcon, X } from 'lucide-react'
 import { useInstallPrompt } from '../hooks/useInstallPrompt'
+import { useAuth } from '../contexts/AuthContext'
+import BookingCalendar from '../components/BookingCalendar'
 function TabBoats() {
   const [boats, setBoats] = useState([])
   const [allUsers, setAllUsers] = useState([])
   const [loading, setLoading] = useState(false)
+  const { user } = useAuth()
   
   // Form state
   const [newBoat, setNewBoat] = useState({ name: '', description: '', location: '' })
@@ -14,6 +17,11 @@ function TabBoats() {
   // Edit state
   const [editingBoat, setEditingBoat] = useState(null)
   const [uploadingImage, setUploadingImage] = useState(false)
+
+  // Calendar state
+  const [activeCalendarBoat, setActiveCalendarBoat] = useState(null)
+  const [calendarBookings, setCalendarBookings] = useState([])
+  const [calendarLoading, setCalendarLoading] = useState(false)
   
   async function fetchData() {
     setLoading(true)
@@ -144,6 +152,51 @@ function TabBoats() {
     }
   }
 
+  // Kalender logik for Admin
+  const fetchBoatBookings = async (boatId) => {
+    setCalendarLoading(true)
+    const { data, error } = await supabase.from('bookings').select('*').eq('boat_id', boatId)
+    if (!error && data) {
+      setCalendarBookings(data)
+    }
+    setCalendarLoading(false)
+  }
+
+  const handleOpenCalendar = (boat) => {
+    setActiveCalendarBoat(boat)
+    fetchBoatBookings(boat.id)
+  }
+
+  const handleCreateAdminBooking = async (bookingData) => {
+    setCalendarLoading(true)
+    // Opretter en booking med adminens user_id
+    const { error } = await supabase.from('bookings').insert({
+        boat_id: activeCalendarBoat.id,
+        user_id: user.id,
+        start_date: bookingData.start_date,
+        end_date: bookingData.end_date
+    })
+    
+    if (error) {
+        alert("Fejl ved oprettelse af booking: " + error.message)
+    } else {
+        fetchBoatBookings(activeCalendarBoat.id)
+    }
+    setCalendarLoading(false)
+  }
+
+  const handleDeleteAdminBooking = async (bookingId) => {
+    if(!window.confirm('Slet denne booking permanent?')) return
+    setCalendarLoading(true)
+    const { error } = await supabase.from('bookings').delete().eq('id', bookingId)
+    if (error) {
+        alert("Fejl ved sletning af booking: " + error.message)
+    } else {
+        fetchBoatBookings(activeCalendarBoat.id)
+    }
+    setCalendarLoading(false)
+  }
+
   return (
     <div className="space-y-8 fade-in duration-300">
       <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
@@ -174,6 +227,9 @@ function TabBoats() {
                  <p className="text-gray-600 text-sm">{boat.description}</p>
                </div>
                <div className="mt-4 flex items-center space-x-4">
+                 <button onClick={() => handleOpenCalendar(boat)} className="flex items-center text-green-600 text-sm hover:underline">
+                   <CalendarIcon className="h-4 w-4 mr-1" /> Kalender
+                 </button>
                  <button onClick={() => setEditingBoat(boat)} className="flex items-center text-blue-600 text-sm hover:underline">
                    <Edit2 className="h-4 w-4 mr-1" /> Rediger
                  </button>
@@ -300,6 +356,34 @@ function TabBoats() {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* KALENDER MODAL */}
+      {activeCalendarBoat && (
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-5xl max-h-[90vh] overflow-y-auto relative animate-fade-in">
+            <div className="sticky top-0 bg-white border-b border-gray-100 p-4 flex justify-between items-center z-10">
+              <h2 className="text-xl font-bold text-gray-900 flex items-center">
+                <CalendarIcon className="h-6 w-6 mr-2 text-green-600" />
+                Kalender: {activeCalendarBoat.name}
+              </h2>
+              <button onClick={() => setActiveCalendarBoat(null)} className="text-gray-400 hover:text-gray-600 p-2 rounded-full hover:bg-gray-100 transition-colors">
+                <X className="h-6 w-6" />
+              </button>
+            </div>
+            
+            <div className="p-6">
+              <BookingCalendar 
+                 bookings={calendarBookings}
+                 onBook={handleCreateAdminBooking}
+                 onDeleteBooking={handleDeleteAdminBooking}
+                 userId={user?.id}
+                 loading={calendarLoading}
+                 isBaadsmand={true} // Giver fuld adgang til at se/slette andres reservationer
+              />
+            </div>
           </div>
         </div>
       )}
