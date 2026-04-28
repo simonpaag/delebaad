@@ -1,0 +1,13 @@
+---
+name: deploy
+description: Deploy and end the current session
+---
+
+# Deploy & End Session Workflow
+
+When I run this command, please follow these exact steps:
+
+1. **Document Architecture & Changes**: Update `CHANGELOG.md` with the date, version, and a summary of the features and architectural changes we made in this session.
+2. **Build**: Run `npm run build` to ensure there are no compilation errors.
+3. **Deploy (Git)**: Run `git add .`, then `git commit -m "chore: deploy and end session"`, and finally `git push origin main`.
+4. **Report**: Reply to me with the current version and confirm that the deployment has been pushed.
