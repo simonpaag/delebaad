@@ -25,8 +25,8 @@ CREATE TABLE IF NOT EXISTS public.bookings (
   id uuid default gen_random_uuid() primary key,
   boat_id uuid references public.boats(id) on delete cascade,
   user_id uuid references public.profiles(id) on delete cascade,
-  start_date date not null,
-  end_date date not null,
+  start_date timestamptz not null,
+  end_date timestamptz not null,
   check (end_date >= start_date)
 );
 
@@ -196,7 +196,7 @@ begin
     where b.boat_id = new.boat_id
       and b.id != coalesce(new.id, '00000000-0000-0000-0000-000000000000'::uuid)
       and (
-        (new.start_date <= b.end_date) and (new.end_date >= b.start_date)
+        (new.start_date < b.end_date) and (new.end_date > b.start_date)
       )
   ) then
     raise exception 'Booking overlapper med en eksisterende booking.';
@@ -376,3 +376,29 @@ create policy "Admins can upload boat images" on storage.objects for insert to a
 create policy "Admins can update boat images" on storage.objects for update to authenticated using (bucket_id = 'boat_images' and public.is_admin());
 create policy "Admins can delete boat images" on storage.objects for delete to authenticated using (bucket_id = 'boat_images' and public.is_admin());
 create policy "Public can view boat images" on storage.objects for select using (bucket_id = 'boat_images');
+
+-- ==========================================
+-- MIGRATION FOR 3-TIMERS TIMESLOTS
+-- ==========================================
+-- Kør disse linjer i Supabase SQL editor for at opdatere tabellen:
+/*
+ALTER TABLE public.bookings ALTER COLUMN start_date TYPE timestamptz USING start_date::timestamptz;
+ALTER TABLE public.bookings ALTER COLUMN end_date TYPE timestamptz USING end_date::timestamptz;
+
+create or replace function public.check_booking_overlap()
+returns trigger as $$
+begin
+  if exists (
+    select 1 from public.bookings b
+    where b.boat_id = new.boat_id
+      and b.id != coalesce(new.id, '00000000-0000-0000-0000-000000000000'::uuid)
+      and (
+        (new.start_date < b.end_date) and (new.end_date > b.start_date)
+      )
+  ) then
+    raise exception 'Booking overlapper med en eksisterende booking.';
+  end if;
+  return new;
+end;
+$$ language plpgsql security definer;
+*/

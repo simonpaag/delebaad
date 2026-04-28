@@ -10,14 +10,25 @@ import {
   isSameMonth, 
   isSameDay, 
   addDays,
-  isWithinInterval,
   parseISO,
   isBefore,
   startOfDay,
-  eachDayOfInterval
+  setHours,
+  setMinutes,
+  setSeconds,
+  setMilliseconds
 } from 'date-fns'
 import { da } from 'date-fns/locale'
-import { ChevronLeft, ChevronRight, AlertCircle, Trash2 } from 'lucide-react'
+import { ChevronLeft, ChevronRight, AlertCircle, Trash2, Clock } from 'lucide-react'
+
+const TIMESLOTS = [
+  { label: '06:00 - 09:00 (Morgen)', startHour: 6, endHour: 9 },
+  { label: '09:00 - 12:00 (Formiddag)', startHour: 9, endHour: 12 },
+  { label: '12:00 - 15:00 (Eftermiddag)', startHour: 12, endHour: 15 },
+  { label: '15:00 - 18:00 (Sen eftermiddag)', startHour: 15, endHour: 18 },
+  { label: '18:00 - 21:00 (Aften)', startHour: 18, endHour: 21 },
+  { label: '21:00 - 00:00 (Sen aften)', startHour: 21, endHour: 24 }
+]
 
 export default function BookingCalendar({ 
   bookings = [], 
@@ -27,8 +38,8 @@ export default function BookingCalendar({
   loading,
   isBaadsmand
 }) {
-  const [currentMonth, setCurrentMonth] = useState(new Date())
-  const [selection, setSelection] = useState({ start: null, end: null })
+  const [currentMonth, setCurrentMonth] = useState(startOfDay(new Date()))
+  const [selectedDate, setSelectedDate] = useState(null)
   const [bookingError, setBookingError] = useState(null)
 
   const today = startOfDay(new Date())
@@ -37,12 +48,29 @@ export default function BookingCalendar({
   const nextMonth = () => setCurrentMonth(addMonths(currentMonth, 1))
   const prevMonth = () => setCurrentMonth(subMonths(currentMonth, 1))
 
-  // Tjek om en bestemt dato er booket
-  const getBookingForDate = (date) => {
-    return bookings.find(booking => {
-      const start = parseISO(booking.start_date)
-      const end = parseISO(booking.end_date)
-      return isWithinInterval(date, { start, end }) || isSameDay(date, start) || isSameDay(date, end)
+  // Tjek om et bestemt tidsrum er booket
+  const isTimeslotBooked = (date, slot) => {
+    // Bemærk: setHours(24) går automatisk til næste dag kl 00:00 hvilket er præcist hvad vi vil have
+    const slotStart = setMilliseconds(setSeconds(setMinutes(setHours(date, slot.startHour), 0), 0), 0)
+    const slotEnd = setMilliseconds(setSeconds(setMinutes(setHours(date, slot.endHour), 0), 0), 0)
+
+    return bookings.some(booking => {
+      const bStart = parseISO(booking.start_date)
+      const bEnd = parseISO(booking.end_date)
+      // Overlap logic: A overlaps B if A.start < B.end AND A.end > B.start
+      return slotStart < bEnd && slotEnd > bStart
+    })
+  }
+
+  // Find bookinger der rører en bestemt dag (til kalender grid dots)
+  const getBookingsForDay = (date) => {
+    const dayStart = startOfDay(date)
+    const dayEnd = setMilliseconds(setSeconds(setMinutes(setHours(date, 24), 0), 0), 0)
+    
+    return bookings.filter(booking => {
+      const bStart = parseISO(booking.start_date)
+      const bEnd = parseISO(booking.end_date)
+      return dayStart < bEnd && dayEnd > bStart
     })
   }
 
@@ -80,25 +108,8 @@ export default function BookingCalendar({
 
   const handleDateClick = (day) => {
     if (isBefore(day, today)) return // Kan ikke booke tilbage i tiden
-    
-    const existing = getBookingForDate(day)
-    if (existing) {
-        setBookingError('Datoen er allerede booket.')
-        setTimeout(() => setBookingError(null), 3000)
-        return
-    }
-
-    if (!selection.start || (selection.start && selection.end)) {
-        // Ny markering
-        setSelection({ start: day, end: null })
-    } else {
-        // Færdiggør markering
-        if (isBefore(day, selection.start)) {
-            setSelection({ start: day, end: selection.start })
-        } else {
-            setSelection({ ...selection, end: day })
-        }
-    }
+    setSelectedDate(day)
+    setBookingError(null)
   }
 
   const renderCells = () => {
@@ -119,17 +130,14 @@ export default function BookingCalendar({
         
         const isPast = isBefore(day, today)
         const isCurrentMonth = isSameMonth(day, monthStart)
-        const booking = getBookingForDate(day)
-        const isBooked = !!booking
-        const isOwnBooking = isBooked && booking.user_id === userId
+        
+        // Hent bookinger for at vise små prikker
+        const dayBookings = getBookingsForDay(day)
+        const hasBookings = dayBookings.length > 0
+        const hasOwnBooking = dayBookings.some(b => b.user_id === userId)
+        const fullyBooked = TIMESLOTS.every(slot => isTimeslotBooked(day, slot))
 
-        // Tjek om markeret i selection (gældende UI range)
-        let isSelected = false
-        if (selection.start && isSameDay(day, selection.start)) isSelected = true
-        if (selection.end && isSameDay(day, selection.end)) isSelected = true
-        if (selection.start && selection.end && isWithinInterval(day, { start: selection.start, end: selection.end })) {
-            isSelected = true
-        }
+        let isSelected = selectedDate && isSameDay(day, selectedDate)
 
         let bgClass = "bg-white hover:bg-blue-50 cursor-pointer"
         let textClass = isCurrentMonth ? "text-gray-900" : "text-gray-300"
@@ -140,22 +148,34 @@ export default function BookingCalendar({
         } else if (isSelected) {
           bgClass = "bg-blue-500 hover:bg-blue-600"
           textClass = "text-white font-bold"
-        } else if (isOwnBooking) {
-          bgClass = "bg-green-100 hover:bg-green-200 cursor-pointer"
-          textClass = "text-green-800 font-bold"
-        } else if (isBooked) {
-          bgClass = "bg-gray-200 cursor-not-allowed"
-          textClass = "text-gray-500 line-through"
+        } else if (fullyBooked) {
+          bgClass = "bg-gray-100 cursor-pointer hover:bg-gray-200"
+          textClass = "text-gray-400"
         }
 
         days.push(
           <div
-            className={`flex flex-col items-center justify-center p-2 h-12 border border-gray-100 transition-colors ${bgClass}`}
+            className={`flex flex-col items-center justify-center p-2 h-14 border border-gray-100 transition-colors relative ${bgClass}`}
             key={day}
-            onClick={() => (!isPast && !isBooked) ? handleDateClick(cloneDay) : null}
+            onClick={() => (!isPast) ? handleDateClick(cloneDay) : null}
           >
             <span className={textClass}>{formattedDate}</span>
-            {isOwnBooking && <span className="w-1.5 h-1.5 rounded-full bg-green-500 mt-1"></span>}
+            {/* Prik-indikatorer for bookinger under datoen */}
+            {!isPast && hasBookings && !isSelected && (
+              <div className="flex gap-0.5 mt-1">
+                {hasOwnBooking ? (
+                   <span className="w-1.5 h-1.5 rounded-full bg-green-500"></span>
+                ) : (
+                   <span className="w-1.5 h-1.5 rounded-full bg-gray-400"></span>
+                )}
+              </div>
+            )}
+            {/* Vis streg hvis fuldt booket og ikke valgt */}
+            {fullyBooked && !isSelected && (
+               <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-20">
+                  <div className="w-full h-px bg-gray-900 rotate-45 transform origin-center scale-150"></div>
+               </div>
+            )}
           </div>
         )
         day = addDays(day, 1)
@@ -170,27 +190,23 @@ export default function BookingCalendar({
     return <div className="border border-gray-200 rounded-lg overflow-hidden">{rows}</div>
   }
 
-  const handleConfirmBooking = () => {
-    const s = selection.start
-    const e = selection.end || selection.start
+  const handleBookTimeslot = (slot) => {
+    if(!selectedDate) return
     
-    // Tjek at ingen booked dates eksisterer INNENFOR vores range!
-    if (s && e) {
-        const intervalDates = eachDayOfInterval({ start: s, end: e })
-        const overlap = intervalDates.some(d => getBookingForDate(d))
-        if(overlap) {
-            setBookingError('Valgte periode overlapper eksisterende bookinger.')
-            setTimeout(() => setBookingError(null), 3000)
-            setSelection({start: null, end: null})
-            return
-        }
+    const slotStart = setMilliseconds(setSeconds(setMinutes(setHours(selectedDate, slot.startHour), 0), 0), 0)
+    const slotEnd = setMilliseconds(setSeconds(setMinutes(setHours(selectedDate, slot.endHour), 0), 0), 0)
+
+    // Dobbelt tjek at den ikke er booket (selvom knappen burde være disabled)
+    if (isTimeslotBooked(selectedDate, slot)) {
+        setBookingError('Tidsrummet er desværre allerede booket.')
+        setTimeout(() => setBookingError(null), 3000)
+        return
     }
 
     onBook({
-        start_date: format(s, 'yyyy-MM-dd'),
-        end_date: format(e, 'yyyy-MM-dd')
+        start_date: slotStart.toISOString(),
+        end_date: slotEnd.toISOString()
     })
-    setSelection({ start: null, end: null })
   }
 
   // Tjek om vi har vist brugerens egne reservationer (eller alle hvis brugeren er Bådsmand)
@@ -219,48 +235,69 @@ export default function BookingCalendar({
               </div>
           )}
 
-          {/* Action buttons */}
-          {selection.start && (
-              <div className="mt-4 p-4 border border-blue-100 bg-blue-50 rounded-lg flex justify-between items-center">
-                  <div>
-                      <p className="text-sm font-medium text-blue-900">
-                          Reserver fra: <span className="font-bold">{format(selection.start, 'dd. MMM yyyy', { locale: da })}</span> 
-                          {selection.end && <span> til <span className="font-bold">{format(selection.end, 'dd. MMM yyyy', { locale: da })}</span></span>}
-                      </p>
+          {/* Timeslot valgboks når en dag er valgt */}
+          {selectedDate && (
+              <div className="mt-6 bg-white border border-gray-200 rounded-xl p-5 shadow-sm animate-fade-in">
+                  <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+                    <Clock className="w-5 h-5 mr-2 text-blue-600" />
+                    Ledige tider d. {format(selectedDate, 'dd. MMM yyyy', { locale: da })}
+                  </h3>
+                  
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {TIMESLOTS.map((slot, idx) => {
+                      const booked = isTimeslotBooked(selectedDate, slot)
+                      return (
+                        <button
+                          key={idx}
+                          disabled={booked || loading}
+                          onClick={() => handleBookTimeslot(slot)}
+                          className={`
+                            flex items-center justify-between p-3 rounded-lg border text-sm font-medium transition-all
+                            ${booked 
+                              ? 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed' 
+                              : 'bg-white border-blue-200 text-blue-800 hover:bg-blue-50 hover:border-blue-300 cursor-pointer shadow-sm'}
+                          `}
+                        >
+                          <span>{slot.label}</span>
+                          {booked ? (
+                            <span className="text-xs bg-gray-200 text-gray-600 px-2 py-1 rounded">Booket</span>
+                          ) : (
+                            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded">Ledig - Reserver</span>
+                          )}
+                        </button>
+                      )
+                    })}
                   </div>
-                  <button 
-                    disabled={loading}
-                    onClick={handleConfirmBooking}
-                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium rounded-md transition-colors disabled:opacity-50 shadow-sm"
-                  >
-                    {loading ? 'Reserverer...' : 'Godkend Booking'}
-                  </button>
               </div>
           )}
         </div>
 
         {/* Oversigt over egne (eller alle) bookinger */}
-        <div className="w-full lg:w-72">
+        <div className="w-full lg:w-80">
             <h3 className="text-sm font-bold text-gray-900 uppercase tracking-wider mb-4 border-b border-gray-100 pb-2">
                 {isBaadsmand ? 'Alle Bookinger (Bådsmand)' : 'Dine planlagte ture'}
             </h3>
             {displayedBookings.length === 0 ? (
                 <p className="text-sm text-gray-500 italic">Ingen bookinger at vise.</p>
             ) : (
-                <ul className="space-y-3">
+                <ul className="space-y-3 max-h-[500px] overflow-y-auto pr-2 custom-scrollbar">
                     {displayedBookings.map(b => (
-                        <li key={b.id} className="p-3 bg-white border border-gray-200 rounded-lg shadow-sm flex flex-col group justify-between items-start">
-                            <span className="text-sm font-semibold text-gray-900">
-                                {format(parseISO(b.start_date), 'dd. MMM', { locale: da })} - {format(parseISO(b.end_date), 'dd. MMM', { locale: da })}
+                        <li key={b.id} className="p-3 bg-white border border-gray-200 rounded-lg shadow-sm flex flex-col group items-start">
+                            <span className="text-sm font-semibold text-gray-900 mb-1">
+                                {format(parseISO(b.start_date), 'dd. MMM yyyy', { locale: da })}
                             </span>
-                            <div className="w-full flex justify-end mt-2">
+                            <span className="text-xs text-gray-600 bg-gray-100 px-2 py-1 rounded-md mb-3">
+                                {format(parseISO(b.start_date), 'HH:mm', { locale: da })} - {format(parseISO(b.end_date), 'HH:mm', { locale: da })}
+                            </span>
+                            
+                            <div className="w-full flex justify-end">
                                 <button 
                                   onClick={() => onDeleteBooking(b.id)}
-                                  className="text-gray-400 hover:text-red-600 transition-colors flex items-center text-xs"
+                                  className="text-gray-400 hover:text-red-600 transition-colors flex items-center text-xs bg-gray-50 hover:bg-red-50 px-2 py-1 rounded border"
                                   title="Afmeld tur"
                                 >
                                     <Trash2 className="w-3.5 h-3.5 mr-1" />
-                                    Afmeld
+                                    Afmeld tur
                                 </button>
                             </div>
                         </li>
@@ -269,9 +306,9 @@ export default function BookingCalendar({
             )}
             
             <div className="mt-6 p-4 bg-gray-50 border border-gray-100 rounded-lg text-xs leading-relaxed text-gray-600 space-y-2">
-                <p className="flex items-center"><span className="inline-block w-3 h-3 bg-green-100 rounded-full border border-green-300 mr-2 flex-shrink-0"></span>Dine reservationer</p>
-                <p className="flex items-center"><span className="inline-block w-3 h-3 bg-gray-200 rounded-full border border-gray-300 mr-2 flex-shrink-0"></span>Booket af andre (skjult for dig)</p>
-                <p className="flex items-center"><span className="inline-block w-3 h-3 bg-blue-500 rounded-full border border-blue-600 mr-2 flex-shrink-0"></span>Dit aktuelle valg</p>
+                <p className="flex items-center"><span className="inline-block w-3 h-3 bg-green-500 rounded-full mr-2 flex-shrink-0"></span>Dato med din reservation</p>
+                <p className="flex items-center"><span className="inline-block w-3 h-3 bg-gray-400 rounded-full mr-2 flex-shrink-0"></span>Dato med andres reservation</p>
+                <p className="flex items-center"><span className="inline-block w-4 h-px bg-gray-900 rotate-45 mr-2 flex-shrink-0"></span>Fuldt booket dato</p>
             </div>
         </div>
       </div>
