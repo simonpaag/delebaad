@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
-import { Settings, Users, Ship, Anchor, LogOut, Plus, Trash2, Mail, LayoutGrid } from 'lucide-react'
+import { Settings, Users, Ship, Anchor, LogOut, Plus, Trash2, Mail, LayoutGrid, Copy } from 'lucide-react'
 function TabBoats() {
   const [boats, setBoats] = useState([])
   const [allUsers, setAllUsers] = useState([])
@@ -365,6 +365,15 @@ function TabKanban() {
     e.dataTransfer.setData('ticketId', ticketId)
   }
 
+  const handleCopyTicket = (ticket) => {
+    const textToCopy = `Titel: ${ticket.title}\nBeskrivelse: ${ticket.description || 'Ingen beskrivelse'}`;
+    navigator.clipboard.writeText(textToCopy).then(() => {
+      // Optional: kunnne vise en kort besked, men systemets standard er ofte fint
+    }).catch(err => {
+      console.error("Kunne ikke kopiere:", err);
+    });
+  }
+
   const handleDrop = async (e, targetStatus) => {
     e.preventDefault()
     const ticketId = e.dataTransfer.getData('ticketId')
@@ -420,7 +429,10 @@ function TabKanban() {
                  >
                    <div className="flex justify-between items-start mb-2">
                       <h5 className="font-semibold text-sm text-gray-900">{ticket.title}</h5>
-                      <button onClick={() => handleDeleteTicket(ticket.id)} className="text-gray-400 hover:text-red-500"><Trash2 className="h-3 w-3" /></button>
+                      <div className="flex space-x-2">
+                        <button onClick={() => handleCopyTicket(ticket)} title="Kopiér til Antigravity" className="text-gray-400 hover:text-blue-500"><Copy className="h-3 w-3" /></button>
+                        <button onClick={() => handleDeleteTicket(ticket.id)} title="Slet opgave" className="text-gray-400 hover:text-red-500"><Trash2 className="h-3 w-3" /></button>
+                      </div>
                    </div>
                    {ticket.description && <p className="text-xs text-gray-600 mb-2">{ticket.description}</p>}
                    
