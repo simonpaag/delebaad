@@ -4,6 +4,7 @@
 CREATE TABLE IF NOT EXISTS public.profiles (
   id uuid references auth.users on delete cascade primary key,
   name text,
+  email text,
   role text default 'user' check (role in ('user', 'admin'))
 );
 
@@ -136,8 +137,8 @@ create policy "Alle kan læse settings" on public.settings for select to authent
 create or replace function public.handle_new_user()
 returns trigger as $$
 begin
-  insert into public.profiles (id, name, role)
-  values (new.id, new.raw_user_meta_data->>'full_name', 'user');
+  insert into public.profiles (id, name, email, role)
+  values (new.id, new.raw_user_meta_data->>'full_name', new.email, 'user');
   return new;
 end;
 $$ language plpgsql security definer;
@@ -361,3 +362,17 @@ create policy "Admins can upload kanban images" on storage.objects for insert to
 create policy "Admins can update kanban images" on storage.objects for update to authenticated using (bucket_id = 'kanban_images' and public.is_admin());
 create policy "Admins can delete kanban images" on storage.objects for delete to authenticated using (bucket_id = 'kanban_images' and public.is_admin());
 create policy "Public can view kanban images" on storage.objects for select using (bucket_id = 'kanban_images');
+
+-- ==========================================
+-- BOAT IMAGES STORAGE BUCKET
+-- ==========================================
+alter table public.boats add column if not exists image_url text;
+
+insert into storage.buckets (id, name, public) 
+values ('boat_images', 'boat_images', true)
+on conflict (id) do nothing;
+
+create policy "Admins can upload boat images" on storage.objects for insert to authenticated with check (bucket_id = 'boat_images' and public.is_admin());
+create policy "Admins can update boat images" on storage.objects for update to authenticated using (bucket_id = 'boat_images' and public.is_admin());
+create policy "Admins can delete boat images" on storage.objects for delete to authenticated using (bucket_id = 'boat_images' and public.is_admin());
+create policy "Public can view boat images" on storage.objects for select using (bucket_id = 'boat_images');
