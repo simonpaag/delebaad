@@ -705,7 +705,8 @@ export default function AdminDashboard() {
           </button>
         </nav>
         
-        <div className="p-4 border-t border-gray-100">
+        <div className="p-4 border-t border-gray-100 flex flex-col items-center">
+          <span className="text-[10px] text-gray-400 mb-2 font-mono uppercase tracking-widest">Platform v1.0.1</span>
           <button onClick={handleLogout} className="flex items-center w-full px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors">
             <LogOut className="h-5 w-5 mr-3 flex-shrink-0" /> Log ud
           </button>
