@@ -877,10 +877,14 @@ export default function AdminDashboard({ onLogout }) {
       <main className="flex-1 overflow-y-auto bg-gray-50/50">
         <div className="p-4 sm:p-6 md:p-10 max-w-6xl mx-auto">
           <header className="mb-8 flex justify-between items-center md:block">
-             <div>
-               <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
-                 {activeTab === 'boats' ? 'Både & Tilknytninger' : activeTab === 'users' ? 'Brugere' : activeTab === 'kanban' ? 'Opgaver / Kanban' : 'Indstillinger'}
-               </h1>
+             <div className="flex items-center mb-2 md:mb-0">
+                {activeTab === 'boats' && <Ship className="h-6 w-6 text-blue-600 mr-2" />}
+                {activeTab === 'users' && <Users className="h-6 w-6 text-blue-600 mr-2" />}
+                {activeTab === 'kanban' && <LayoutGrid className="h-6 w-6 text-blue-600 mr-2" />}
+                {activeTab === 'settings' && <Settings className="h-6 w-6 text-blue-600 mr-2" />}
+                <h1 className="text-xl font-bold text-gray-900 tracking-tight">
+                  {activeTab === 'boats' ? 'Både og tilknytninger' : activeTab === 'users' ? 'Brugere' : activeTab === 'kanban' ? 'Opgaver / Kanban' : 'Indstillinger'}
+                </h1>
              </div>
              
              {/* Simpelt mobile menu alternativ */}
