@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react'
-import { supabase } from '../lib/supabase'
+import { supabase, supabaseUrl, supabaseAnonKey } from '../lib/supabase'
+import { createClient } from '@supabase/supabase-js'
 import { Settings, Users, Ship, Anchor, LogOut, Plus, Trash2, Mail, LayoutGrid, Copy, Edit2, Download, Share } from 'lucide-react'
 import { useInstallPrompt } from '../hooks/useInstallPrompt'
 function TabBoats() {
@@ -308,6 +309,8 @@ function TabBoats() {
 
 function TabUsers() {
   const [users, setUsers] = useState([])
+  const [newUser, setNewUser] = useState({ name: '', email: '' })
+  const [isCreating, setIsCreating] = useState(false)
   
   async function fetchUsers() {
     const { data } = await supabase.from('profiles').select('*')
@@ -323,8 +326,65 @@ function TabUsers() {
     fetchUsers()
   }
 
+  const handleCreateUser = async (e) => {
+    e.preventDefault()
+    setIsCreating(true)
+
+    try {
+      // Opret midlertidig forbindelse der ikke ændrer adminens session
+      const tempSupabase = createClient(supabaseUrl, supabaseAnonKey, {
+        auth: {
+          persistSession: false,
+          autoRefreshToken: false,
+          detectSessionInUrl: false,
+        }
+      })
+
+      const tempPassword = 'Delebaad2026!'
+      
+      const { data, error } = await tempSupabase.auth.signUp({
+        email: newUser.email,
+        password: tempPassword,
+        options: {
+          data: {
+            full_name: newUser.name
+          }
+        }
+      })
+
+      if (error) {
+        throw error
+      }
+
+      alert(`Brugeren ${newUser.name} blev oprettet!\n\nEmail: ${newUser.email}\nMidlertidig kode: ${tempPassword}\n\nHusk at bede brugeren ændre sin kode når de logger ind. (Hvis Confirm Email er slået til i Supabase, skal de dog først bekræfte deres email via det link de lige har modtaget).`)
+      setNewUser({ name: '', email: '' })
+      
+      // Vent lidt for at lade triggers køre i databasen
+      setTimeout(fetchUsers, 1000)
+    } catch (err) {
+      alert("Fejl ved oprettelse af bruger: " + err.message)
+    } finally {
+      setIsCreating(false)
+    }
+  }
+
   return (
-    <div className="bg-white rounded-xl shadow-sm border p-6">
+    <div className="space-y-8 fade-in duration-300">
+      <div className="bg-white p-6 rounded-xl border border-gray-200 shadow-sm">
+        <h3 className="text-lg font-bold text-gray-900 mb-4 flex items-center">
+          <Users className="mr-2 h-5 w-5 text-blue-600" /> Opret Ny Bruger
+        </h3>
+        <form onSubmit={handleCreateUser} className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <input required type="text" placeholder="Fulde Navn" value={newUser.name} onChange={e => setNewUser({...newUser, name: e.target.value})} className="p-2 border rounded-md" />
+          <input required type="email" placeholder="Email-adresse" value={newUser.email} onChange={e => setNewUser({...newUser, email: e.target.value})} className="p-2 border rounded-md" />
+          <button disabled={isCreating} type="submit" className="bg-blue-600 text-white p-2 rounded-md hover:bg-blue-700 transition flex justify-center items-center">
+            {isCreating ? 'Opretter...' : 'Opret Bruger & Generer Kode'}
+          </button>
+        </form>
+      </div>
+
+      <div className="bg-white rounded-xl shadow-sm border p-6">
+        <h3 className="text-lg font-bold text-gray-900 mb-4">Eksisterende Brugere</h3>
       <table className="min-w-full divide-y divide-gray-200">
         <thead>
           <tr>
@@ -354,6 +414,7 @@ function TabUsers() {
           ))}
         </tbody>
       </table>
+      </div>
     </div>
   )
 }
