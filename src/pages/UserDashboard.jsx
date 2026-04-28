@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
-import { Ship, Calendar as CalendarIcon, MapPin, LogOut, X } from 'lucide-react'
+import { Ship, Calendar as CalendarIcon, MapPin, LogOut, X, Download, Share } from 'lucide-react'
+import { useInstallPrompt } from '../hooks/useInstallPrompt'
 import BookingCalendar from '../components/BookingCalendar'
 import BoatLogbook from '../components/BoatLogbook'
 import BoatTasks from '../components/BoatTasks'
@@ -10,6 +11,9 @@ export default function UserDashboard() {
   const { user } = useAuth()
   const [boats, setBoats] = useState([])
   const [loading, setLoading] = useState(true)
+  
+  const { isInstallable, promptInstall, isIOS } = useInstallPrompt()
+  const [showIOSPrompt, setShowIOSPrompt] = useState(false)
   
   // Kalender state
   const [activeBoat, setActiveBoat] = useState(null)
@@ -145,6 +149,15 @@ export default function UserDashboard() {
               <div className="text-sm font-medium text-gray-500 hidden sm:block">
                 Logget ind som: {user?.email}
               </div>
+              {(isInstallable || isIOS) && (
+                <button 
+                  onClick={() => isIOS ? setShowIOSPrompt(true) : promptInstall()}
+                  className="flex items-center text-blue-600 hover:text-blue-800 font-medium px-3 py-1.5 rounded-md hover:bg-blue-50 transition-colors"
+                >
+                  <Download className="h-4 w-4 mr-2" />
+                  Installer App
+                </button>
+              )}
               <button 
                 onClick={handleLogout}
                 className="flex items-center text-red-500 hover:text-red-700 font-medium px-3 py-1.5 rounded-md hover:bg-red-50 transition-colors"
@@ -314,6 +327,37 @@ export default function UserDashboard() {
           </div>
         )}
       </main>
+
+      {/* iOS Install Prompt Modal */}
+      {showIOSPrompt && (
+        <div className="fixed inset-0 bg-black/50 flex items-end justify-center z-50 p-4 pb-12 sm:items-center">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6 animate-fade-in relative">
+            <button onClick={() => setShowIOSPrompt(false)} className="absolute top-4 right-4 text-gray-400 hover:text-gray-600">
+              ✕
+            </button>
+            <h3 className="text-xl font-bold text-gray-900 mb-2 text-center">Installer på iPhone</h3>
+            <p className="text-gray-600 mb-6 text-center text-sm">
+              Føj appen til din hjemmeskærm for den bedste oplevelse.
+            </p>
+            <ol className="space-y-4 text-sm text-gray-700 mb-6 bg-gray-50 p-4 rounded-xl">
+              <li className="flex items-center">
+                <span className="bg-blue-100 text-blue-700 font-bold rounded-full w-6 h-6 flex items-center justify-center mr-3 shrink-0">1</span>
+                <span>Tryk på Del-ikonet (<Share className="inline w-4 h-4 mx-1" />) i bunden af Safari.</span>
+              </li>
+              <li className="flex items-center">
+                <span className="bg-blue-100 text-blue-700 font-bold rounded-full w-6 h-6 flex items-center justify-center mr-3 shrink-0">2</span>
+                <span>Scroll ned og vælg <strong>"Føj til hjemmeskærm"</strong>.</span>
+              </li>
+            </ol>
+            <button 
+              onClick={() => setShowIOSPrompt(false)}
+              className="w-full bg-blue-600 text-white font-medium py-3 rounded-xl hover:bg-blue-700 transition"
+            >
+              Forstået
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
