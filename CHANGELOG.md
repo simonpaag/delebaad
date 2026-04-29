@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.0] - 2026-04-28
+### Added
+- **Public Boat Profiles:** Created a new public-facing route (`/boat/:id`) allowing unauthenticated users to view a boat's details and read-only calendar availability.
+- **Boat Images on Dashboard:** Added dynamic rendering of uploaded boat images on the user dashboard boat cards instead of generic icons.
+- **Enhanced Boat Navigation:** Split the single "Kalender og Booking" button on the boat card into four distinct buttons (Kalender, Logbog, Drift & Opgaver, Fællesøkonomi) in a 2x2 grid for faster navigation.
+- **Logbook Separation:** The logbook is now a fully standalone tab instead of sharing horizontal space with the calendar.
+
 ## [1.1.0] - 2026-04-28
 ### Added
 - **User Creation:** Admins can now create new users directly from the Admin Dashboard using a background Supabase client.
