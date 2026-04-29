@@ -79,7 +79,7 @@ export default function PublicBoat() {
             {/* Billede */}
             <div className="w-full md:w-1/3 h-48 md:h-64 bg-gray-100 rounded-2xl overflow-hidden shadow-inner flex items-center justify-center flex-shrink-0 relative">
               {boat.image_url ? (
-                <img src={boat.image_url} alt={boat.name} className="w-full h-full object-cover" />
+                <img src={boat.image_url} alt={boat.name} loading="lazy" className="w-full h-full object-cover" />
               ) : (
                 <Ship className="h-20 w-20 text-gray-300" />
               )}

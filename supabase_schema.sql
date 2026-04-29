@@ -408,4 +408,13 @@ $$ language plpgsql security definer;
 -- Nye politikker til public boat sider
 create policy "Public kan læse både" on public.boats for select using (true);
 create policy "Public kan læse bookinger" on public.bookings for select using (true);
+
+-- Prestandaoptimering: Database indekser
+CREATE INDEX IF NOT EXISTS idx_boat_members_user_id ON public.boat_members(user_id);
+CREATE INDEX IF NOT EXISTS idx_boat_members_boat_id ON public.boat_members(boat_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_boat_id ON public.bookings(boat_id);
+CREATE INDEX IF NOT EXISTS idx_bookings_user_id ON public.bookings(user_id);
+CREATE INDEX IF NOT EXISTS idx_boat_logs_boat_id ON public.boat_logs(boat_id);
+CREATE INDEX IF NOT EXISTS idx_boat_expenses_boat_id ON public.boat_expenses(boat_id);
+CREATE INDEX IF NOT EXISTS idx_boat_tasks_boat_id ON public.boat_tasks(boat_id);
 */

@@ -1,13 +1,15 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, Suspense, lazy } from 'react'
 import { supabase } from '../lib/supabase'
 import { useAuth } from '../contexts/AuthContext'
 import { useNavigate } from 'react-router-dom'
-import { Ship, Calendar as CalendarIcon, MapPin, LogOut, X, Download, Share, Settings } from 'lucide-react'
+import { Ship, Calendar as CalendarIcon, MapPin, LogOut, X, Download, Share, Settings, Loader2 } from 'lucide-react'
 import { useInstallPrompt } from '../hooks/useInstallPrompt'
-import BookingCalendar from '../components/BookingCalendar'
-import BoatLogbook from '../components/BoatLogbook'
-import BoatTasks from '../components/BoatTasks'
-import BoatExpenses from '../components/BoatExpenses'
+
+const BookingCalendar = lazy(() => import('../components/BookingCalendar'))
+const BoatLogbook = lazy(() => import('../components/BoatLogbook'))
+const BoatTasks = lazy(() => import('../components/BoatTasks'))
+const BoatExpenses = lazy(() => import('../components/BoatExpenses'))
+
 export default function UserDashboard() {
   const { user, isAdmin } = useAuth()
   const navigate = useNavigate()
@@ -198,7 +200,7 @@ export default function UserDashboard() {
                   <div key={boat.id} className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow">
                     <div className="h-48 bg-gray-100 relative overflow-hidden flex items-center justify-center">
                       {boat.image_url ? (
-                        <img src={boat.image_url} alt={boat.name} className="w-full h-full object-cover" />
+                        <img src={boat.image_url} alt={boat.name} loading="lazy" className="w-full h-full object-cover" />
                       ) : (
                         <Ship className="h-24 w-24 text-gray-300" />
                       )}
@@ -331,45 +333,47 @@ export default function UserDashboard() {
                 </div>
                 
                 {/* INDHOLD AFHÆNGIG AF TAB */}
-                {activeTab === 'booking' && (
-                  <div>
-                    <BookingCalendar 
-                       boatId={activeBoat.id}
-                       bookings={bookings}
-                       onBook={handleCreateBooking}
-                       onDeleteBooking={handleDeleteBooking}
-                       userId={user.id}
-                       loading={calendarLoading}
-                       isBaadsmand={activeBoat.boat_members?.[0]?.member_role === 'baadsmand'}
-                    />
-                  </div>
-                )}
+                <Suspense fallback={<div className="py-20 flex flex-col items-center justify-center text-gray-500"><Loader2 className="w-8 h-8 text-blue-500 animate-spin mb-4" />Indlæser fanen...</div>}>
+                  {activeTab === 'booking' && (
+                    <div>
+                      <BookingCalendar 
+                         boatId={activeBoat.id}
+                         bookings={bookings}
+                         onBook={handleCreateBooking}
+                         onDeleteBooking={handleDeleteBooking}
+                         userId={user.id}
+                         loading={calendarLoading}
+                         isBaadsmand={activeBoat.boat_members?.[0]?.member_role === 'baadsmand'}
+                      />
+                    </div>
+                  )}
 
-                {activeTab === 'logbook' && (
-                  <div>
-                    <BoatLogbook 
-                       boatId={activeBoat.id}
-                       userId={user.id}
-                       isBaadsmand={activeBoat.boat_members?.[0]?.member_role === 'baadsmand'}
+                  {activeTab === 'logbook' && (
+                    <div>
+                      <BoatLogbook 
+                         boatId={activeBoat.id}
+                         userId={user.id}
+                         isBaadsmand={activeBoat.boat_members?.[0]?.member_role === 'baadsmand'}
+                      />
+                    </div>
+                  )}
+                  
+                  {activeTab === 'tasks' && (
+                    <BoatTasks 
+                      boatId={activeBoat.id}
+                      userId={user.id}
+                      isBaadsmand={activeBoat.boat_members?.[0]?.member_role === 'baadsmand'}
                     />
-                  </div>
-                )}
-                
-                {activeTab === 'tasks' && (
-                  <BoatTasks 
-                    boatId={activeBoat.id}
-                    userId={user.id}
-                    isBaadsmand={activeBoat.boat_members?.[0]?.member_role === 'baadsmand'}
-                  />
-                )}
-                
-                {activeTab === 'expenses' && (
-                  <BoatExpenses 
-                    boatId={activeBoat.id}
-                    userId={user.id}
-                    isBaadsmand={activeBoat.boat_members?.[0]?.member_role === 'baadsmand'}
-                  />
-                )}
+                  )}
+                  
+                  {activeTab === 'expenses' && (
+                    <BoatExpenses 
+                      boatId={activeBoat.id}
+                      userId={user.id}
+                      isBaadsmand={activeBoat.boat_members?.[0]?.member_role === 'baadsmand'}
+                    />
+                  )}
+                </Suspense>
               </div>
             )}
           </div>

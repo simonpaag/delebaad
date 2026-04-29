@@ -1,11 +1,11 @@
-import React from 'react'
+import React, { Suspense, lazy } from 'react'
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom'
 import { AuthProvider, useAuth } from './contexts/AuthContext'
-import Login from './pages/Login'
-import UserDashboard from './pages/UserDashboard'
-import AdminDashboard from './pages/AdminDashboard'
 
-import PublicBoat from './pages/PublicBoat'
+const Login = lazy(() => import('./pages/Login'))
+const UserDashboard = lazy(() => import('./pages/UserDashboard'))
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'))
+const PublicBoat = lazy(() => import('./pages/PublicBoat'))
 
 // Protected Route: Kun for indloggede brugere
 function ProtectedRoute({ children }) {
@@ -32,28 +32,30 @@ function RootRoute() {
 
 function AppContent() {
   return (
-    <Routes>
-      <Route path="/" element={<RootRoute />} />
-      <Route path="/login" element={<Login />} />
-      <Route path="/boat/:id" element={<PublicBoat />} />
-      <Route
-        path="/dashboard"
-        element={
-          <ProtectedRoute>
-            <UserDashboard />
-          </ProtectedRoute>
-        }
-      />
-      <Route
-        path="/admin/*"
-        element={
-          <AdminRoute>
-            <AdminDashboard />
-          </AdminRoute>
-        }
-      />
-      <Route path="*" element={<Navigate to="/" />} />
-    </Routes>
+    <Suspense fallback={<div className="min-h-screen flex items-center justify-center text-gray-500">Indlæser siden...</div>}>
+      <Routes>
+        <Route path="/" element={<RootRoute />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/boat/:id" element={<PublicBoat />} />
+        <Route
+          path="/dashboard"
+          element={
+            <ProtectedRoute>
+              <UserDashboard />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/*"
+          element={
+            <AdminRoute>
+              <AdminDashboard />
+            </AdminRoute>
+          }
+        />
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+    </Suspense>
   )
 }
 
