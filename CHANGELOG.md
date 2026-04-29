@@ -1,5 +1,10 @@
 # Changelog
 
+## [1.2.1] - 2026-04-29
+### Changed
+- **Performance Optimizations:** Implemented React.lazy() and Suspense for code-splitting heavy dashboard tabs (BookingCalendar, BoatLogbook, BoatTasks, BoatExpenses) and added `loading="lazy"` to images.
+- **Database Indexing:** Added SQL migration for necessary database indexes on high-traffic tables (bookings, boat_members, boat_tasks, boat_logs, boat_expenses) to eliminate sequential scans.
+
 ## [1.2.0] - 2026-04-28
 ### Added
 - **Public Boat Profiles:** Created a new public-facing route (`/boat/:id`) allowing unauthenticated users to view a boat's details and read-only calendar availability.

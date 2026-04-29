@@ -867,7 +867,7 @@ export default function AdminDashboard({ onLogout }) {
             </button>
           )}
 
-          <div className="text-xs text-gray-400 text-center mb-2">Version 1.2.0</div>
+          <div className="text-xs text-gray-400 text-center mb-2">Version 1.2.1</div>
           <button onClick={handleLogout} className="flex items-center w-full px-4 py-3 text-sm font-medium text-red-600 hover:bg-red-50 rounded-lg transition-colors">
             <LogOut className="h-5 w-5 mr-3 flex-shrink-0" /> Log ud
           </button>
